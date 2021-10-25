@@ -18,10 +18,10 @@ class Rdkafka(ConanFile):
     )
     exports_sources = "src/*"
 
-    def configure(self):
-      self.options["gtest"].shared = self.options.shared
-      self.options["librdkafka"].shared = self.options.shared
-      self.options["lz4"].shared = self.options.shared
+    #def configure(self):
+      #self.options["gtest"].shared = self.options.shared
+      #self.options["librdkafka"].shared = self.options.shared
+      #self.options["lz4"].shared = self.options.shared
 
     def imports(self):
         dest = os.getenv("CONAN_IMPORT_PATH", "bin")

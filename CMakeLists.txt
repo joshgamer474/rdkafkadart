@@ -20,6 +20,7 @@ set(RDKAFKA_SOURCE
 if(BUILD_SHARED_LIBS)
     message("Building as SHARED")
     add_library(RdkafkaDart SHARED ${RDKAFKA_SOURCE} ${RDKAFKA_HEADERS})
+    add_compile_definitions(RdkafkaDart_EXPORTS)
 else()
     message("Building as STATIC")
     add_library(RdkafkaDart STATIC ${RDKAFKA_SOURCE} ${RDKAFKA_HEADERS})

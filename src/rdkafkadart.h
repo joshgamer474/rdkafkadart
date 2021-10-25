@@ -5,10 +5,21 @@
 #include <string>
 #include <vector>
 
-#ifdef RdkafkaDart_EXPORTS
-#define RDK_EXPORT extern "C" __declspec(dllexport)
+#if defined(_MSC_VER)
+#define EXPORT extern "C" __declspec(dllexport)
+#define IMPORT extern "C" __declspec(dllimport)
+#elif defined(__GNUC__)
+#define EXPORT extern "C" __attribute__((visibility("default")))
+#define IMPORT
 #else
-#define RDK_EXPORT extern "C" __declspec(dllimport)
+#define EXPORT
+#define IMPORT
+#endif
+
+#ifdef RdkafkaDart_EXPORTS
+#define RDK_EXPORT EXPORT
+#else
+#define RDK_EXPORT IMPORT
 #endif
 
 RDK_EXPORT void* create_consumer(char* broker, char** topics, int topics_len);
