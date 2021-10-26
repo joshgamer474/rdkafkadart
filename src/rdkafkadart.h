@@ -22,9 +22,10 @@
 #define RDK_EXPORT IMPORT
 #endif
 
+// Kafka Consumer methods
 RDK_EXPORT void* create_consumer(char* broker, char** topics, int topics_len);
 RDK_EXPORT void consume(void* consumer, int timeout_ms = 100);
 RDK_EXPORT void destroy_consumer(void* consumer);
-RDK_EXPORT const char** get_topics_from_consumer(void* consumer);
+RDK_EXPORT const char* get_topics_from_consumer(void* consumer);
 
 #endif

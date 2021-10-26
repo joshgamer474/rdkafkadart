@@ -58,7 +58,9 @@ void Consumer::init(std::vector<std::string> topics)
     for (auto topic : *metadata->topics())
     {
         alltopics.push_back(topic->topic());
+        alltopicsstr += topic->topic() + ',';
     }
+    alltopicsstr.pop_back();
 
     // Create topic handle(s)
     for (const std::string topic : topics) {
@@ -144,7 +146,8 @@ RdKafka::ErrorCode Consumer::consume_msg(std::string topic, RdKafka::Message* ms
     unsigned char* charbuf;
     std::vector<uint8_t> bufvec;
 
-    if (msg->err() != RdKafka::ERR_NO_ERROR)
+    if (msg->err() != RdKafka::ERR_NO_ERROR &&
+        msg->err() != RdKafka::ERR__TIMED_OUT)
     {
         printf("consume_msg() msg->err(): %i %s\n", msg->err(), msg->errstr().c_str());
     }
@@ -208,7 +211,12 @@ bool Consumer::is_running()
     return run;
 }
 
-std::vector<std::string> Consumer::get_alltopics()
+const std::vector<std::string>& Consumer::get_alltopics()
 {
     return alltopics;
+}
+
+const std::string& Consumer::get_alltopicsstr()
+{
+    return alltopicsstr;
 }

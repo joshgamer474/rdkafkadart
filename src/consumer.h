@@ -20,7 +20,8 @@ public:
     void start(int timeout_ms=100);
     void stop();
     bool is_running();
-    std::vector<std::string> get_alltopics();
+    const std::vector<std::string>& get_alltopics();
+    const std::string& get_alltopicsstr();
 
     std::size_t msgs_consumed;
 
@@ -41,6 +42,7 @@ private:
     RdKafka::Conf* tconf;
     RdKafka::Consumer* consumer;
     std::vector<std::string> alltopics;
+    std::string alltopicsstr;
 
     std::function<void(std::string, std::vector<uint8_t>)> msg_callback;
 };

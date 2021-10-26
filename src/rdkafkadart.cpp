@@ -20,14 +20,8 @@ void destroy_consumer(void* consumer)
     delete con;
 }
 
-const char** get_topics_from_consumer(void* consumer)
+const char* get_topics_from_consumer(void* consumer)
 {
     Consumer* con = static_cast<Consumer*>(consumer);
-    const auto topics = con->get_alltopics();
-    std::vector<const char*> topicsptr(topics.size());
-    for (auto& topic : topics)
-    {
-        topicsptr.push_back(topic.data());
-    }
-    return topicsptr.data();
+    return con->get_alltopicsstr().data();
 }
