@@ -2,26 +2,32 @@
 #include <iostream>
 
 Consumer::Consumer(std::string broker, std::string topic,
-    std::function<void(std::string topic, std::vector<uint8_t>)> msg_callback)
+    std::function<void(std::string topic, std::vector<uint8_t>)> msg_callback,
+    std::function<void(const char* topic, uint8_t* data, uint64_t len)> cmsg_callback)
     : broker(broker),
     msgs_consumed(0),
     run(false),
+    done_consuming(false),
     partition(0),
     start_offset(RdKafka::Topic::OFFSET_BEGINNING),
     msg_callback(msg_callback),
+    cmsg_callback(cmsg_callback),
     msgs_consumed_map(std::map<std::string, size_t>())
 {
     init({ topic });
 }
 
 Consumer::Consumer(std::string broker, std::vector<std::string> topics,
-    std::function<void(std::string topic, std::vector<uint8_t>)> msg_callback)
+    std::function<void(std::string topic, std::vector<uint8_t>)> msg_callback,
+    std::function<void(const char* topic, uint8_t* data, uint64_t len)> cmsg_callback)
     : broker(broker),
     msgs_consumed(0),
     run(false),
+    done_consuming(false),
     partition(0),
     start_offset(RdKafka::Topic::OFFSET_BEGINNING),
     msg_callback(msg_callback),
+    cmsg_callback(cmsg_callback),
     msgs_consumed_map(std::map<std::string, size_t>())
 {
     init(topics);
@@ -31,6 +37,14 @@ Consumer::~Consumer()
 {
     //printf("Consumed %zu messages\n", msgs_consumed);
     stop();
+    // Delete remaining consumed Rdkafka::Messages
+    for (RdKafka::Message* msg : queued_msgs)
+    {
+      if (msg)
+      {
+        delete msg;
+      }
+    }
 }
 
 void Consumer::init(std::vector<std::string> topics)
@@ -72,6 +86,7 @@ void Consumer::init(std::vector<std::string> topics)
 void Consumer::start(int timeout_ms)
 {
     run = true;
+    done_consuming = false;
     // Start consumer for topic+partition at start offset
     for (auto& pair : topic_handles) {
         RdKafka::ErrorCode resp = consumer->start(pair.second, partition, start_offset);
@@ -83,6 +98,25 @@ void Consumer::start(int timeout_ms)
     }
     // Start consuming topics
     consume(timeout_ms);
+
+    // Wait until consuming is complete if cmsg_callback is being used
+    while (done_consuming != true && cmsg_callback != nullptr)
+    {
+        // Consume queued RdKafka::Messages
+        while (!queued_msgs.empty())
+        {
+          RdKafka::Message* msg = queued_msgs.front();
+          // Call c callback for each message consumed
+          cmsg_callback(
+            msg->topic_name().c_str(),
+            (unsigned char*) msg->payload(),
+            msg->len()
+          );
+          queued_msgs.pop_front();
+          delete msg;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
 }
 
 void Consumer::consume(int timeout_ms)
@@ -115,8 +149,10 @@ void Consumer::consume(int timeout_ms)
                     break;
                 }
 
-                // Delete message
-                delete msg;
+                if (cmsg_callback == nullptr)
+                {   // Delete message
+                    delete msg;
+                }
 
                 // Poll for more kafka consumer events
                 consumer->poll(0);
@@ -125,7 +161,7 @@ void Consumer::consume(int timeout_ms)
                 msg = consumer->consume(pair.second, partition, timeout_ms);
             }
 
-            if (msg)
+            if (msg && cmsg_callback == nullptr)
             {
                 delete msg;
             }
@@ -133,6 +169,7 @@ void Consumer::consume(int timeout_ms)
             //printf("Consumed %zu messages on topic %s\n",
             //    msgs_consumed_map[pair.first], pair.first);
         }
+        done_consuming = true;
         printf("consume_thread finished running\n");
     });
 }
@@ -157,20 +194,22 @@ RdKafka::ErrorCode Consumer::consume_msg(std::string topic, RdKafka::Message* ms
         case RdKafka::ERR__TIMED_OUT:
             break;
         case RdKafka::ERR_NO_ERROR:
-            headers = msg->headers();
-            timestamp = msg->timestamp();
-            buf = msg->payload();
-            len = msg->len();
-            //bufvec = static_cast<std::vector<uint8_t> const*>(buf);
-            charbuf = (unsigned char*) buf;
-            // Copy buf* into vector<uint8_t>
-            bufvec = std::vector<uint8_t>(charbuf, charbuf + len);
-            /*printf("broadcasting consume_msg() for msg %zu, len %zu\n",
-                msgs_consumed_map[topic],
-                msg->len());*/
-            // Call msg callback with data
-            if (msg_callback != nullptr) {
+            if (msg_callback != nullptr)
+            {   // Get data from *msg
+                headers = msg->headers();
+                timestamp = msg->timestamp();
+                buf = msg->payload();
+                len = msg->len();
+                charbuf = (unsigned char*) buf;
+                // Copy buf* into vector<uint8_t>
+                bufvec = std::vector<uint8_t>(charbuf, charbuf + len);
+
+                // Call msg callback with data
                 msg_callback(topic, bufvec);
+            }
+            if (cmsg_callback != nullptr)
+            {
+              queued_msgs.push_back(msg);
             }
             msgs_consumed_map[topic]++;
             msgs_consumed++;

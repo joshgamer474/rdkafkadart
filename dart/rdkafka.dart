@@ -6,6 +6,8 @@ import 'package:ffi/ffi.dart';
 
 import 'lib/rdkafkalibrary.dart';
 
+typedef cmsgcallback = ffi.Void Function(ffi.Pointer<Utf8>, ffi.Pointer<ffi.Uint8>, ffi.Uint64);
+
 /// Returns rdkafka library path
 String getLibraryPath() {
   var libraryPath = path.join(Directory.current.parent.path, 'build_release', 'lib', 'libRdkafkaDart.so');
@@ -29,6 +31,8 @@ class KafkaConsumer {
   // Memory pointer to class
   ffi.Pointer<ffi.Void>? _native_instance;
 
+  static const except = -1;
+
   KafkaConsumer(String broker, List<String> topics) {
     // Load rdkafka library
     _nativelib = RdkafkaLibrary(loadLibrary());
@@ -39,11 +43,24 @@ class KafkaConsumer {
     for (var i = 0; i < topics.length; i++) {
       topicsp[i] = topics[i].toNativeUtf8().cast<ffi.Int8>();
     }
+
     // Initialize Kafka Consumer instance
-    _native_instance = _nativelib.create_consumer(brokerp, topicsp, topics.length);
+    _native_instance = _nativelib.create_consumer(
+        brokerp,
+        topicsp,
+        topics.length,
+        ffi.Pointer.fromFunction<cmsgcallback>(cmsg_callback));
 
     // Free memory for temporary ffi pointer
     calloc.free(topicsp);
+  }
+
+  static void cmsg_callback(ffi.Pointer<Utf8> topic,
+    ffi.Pointer<ffi.Uint8> data, int datalen) {
+    final String topicstr = topic.toDartString();
+    final datalist = data.asTypedList(datalen);
+    final datastr = utf8.decode(datalist);
+    print("cmsg_callback() topic: $topicstr, datalen: ${datalen}, data: $datastr");
   }
 
   /// Returns a List<String> containing the Kafka server's topics
