@@ -1,12 +1,14 @@
 import 'dart:convert';
 import 'dart:ffi' as ffi;
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:path/path.dart' as path;
 import 'package:ffi/ffi.dart';
 
 import 'lib/rdkafkalibrary.dart';
 
-typedef cmsgcallback = ffi.Void Function(ffi.Pointer<Utf8>, ffi.Pointer<ffi.Uint8>, ffi.Uint64);
+typedef cmsgcallback = ffi.Void Function(ffi.Pointer<ffi.Void> consumer, ffi.Pointer<Utf8> topic,
+  ffi.Pointer<ffi.Uint8> data, ffi.Uint64 datalen);
 
 /// Returns rdkafka library path
 String getLibraryPath() {
@@ -30,8 +32,9 @@ class KafkaConsumer {
   late RdkafkaLibrary _nativelib;
   // Memory pointer to class
   ffi.Pointer<ffi.Void>? _native_instance;
-
-  static const except = -1;
+  // Map to hold consumed messages in
+  static Map<ffi.Pointer<ffi.Void>, Map<String, Map<int, Uint8List>>> _consumed_msgs =
+    Map<ffi.Pointer<ffi.Void>, Map<String, Map<int, Uint8List>>>();
 
   KafkaConsumer(String broker, List<String> topics) {
     // Load rdkafka library
@@ -55,12 +58,22 @@ class KafkaConsumer {
     calloc.free(topicsp);
   }
 
-  static void cmsg_callback(ffi.Pointer<Utf8> topic,
-    ffi.Pointer<ffi.Uint8> data, int datalen) {
+  /// RdKafka C message receive callback
+  static void cmsg_callback(ffi.Pointer<ffi.Void> consumer,
+    ffi.Pointer<Utf8> topic, ffi.Pointer<ffi.Uint8> data, int datalen) {
     final String topicstr = topic.toDartString();
-    final datalist = data.asTypedList(datalen);
-    final datastr = utf8.decode(datalist);
-    print("cmsg_callback() topic: $topicstr, datalen: ${datalen}, data: $datastr");
+    final Uint8List datalist = data.asTypedList(datalen);
+    final String datastr = utf8.decode(datalist);
+    if (!_consumed_msgs.containsKey(consumer)) {
+      _consumed_msgs[consumer] = Map<String, Map<int, Uint8List>>();
+    }
+    if (!_consumed_msgs[consumer]!.containsKey(topicstr)) {
+      _consumed_msgs[consumer]![topicstr] = Map<int, Uint8List>();
+    }
+    final int len = _consumed_msgs[consumer]![topicstr]!.length;
+    // Store received message to be accessed later from non-static method
+    _consumed_msgs[consumer]![topicstr]![len] = datalist;
+   // print("cmsg_callback() topic: $topicstr, datalen: ${datalen}, data: ${datastr}");
   }
 
   /// Returns a List<String> containing the Kafka server's topics
@@ -75,9 +88,13 @@ class KafkaConsumer {
   }
 
   /// Consume all topics from Kafka
-  void consume({int timeout_ms = 100}) {
+  Map<String, Map<int, Uint8List>>? consume({int timeout_ms = 100}) {
     if (_native_instance != null) {
       _nativelib.consume(_native_instance!, timeout_ms);
+    }
+
+    if (_consumed_msgs.containsKey(_native_instance)) {
+      return _consumed_msgs[_native_instance]!;
     }
   }
 
@@ -98,9 +115,17 @@ void main() {
   final List<String> topics = consumer.get_topics_from_consumer();
   print("Found ${topics.length} topics: ${topics}");
 
-  // Consume topics
-  consumer.consume();
-  sleep(Duration(seconds: 1));
+  // Consume topics' messages
+  Map<String, Map<int, Uint8List>>? msgs = consumer.consume();
+  // Print received messages
+  if (msgs != null) {
+    print("msgs len: ${msgs.length}");
+    msgs.forEach((topic, msgmap) {
+      msgmap.forEach((key, data) {
+        print("topic: $topic, key: $key, data: ${utf8.decode(data, allowMalformed: true)}");
+      });
+    });
+  }
 
   // Destroy consumer
   consumer.destroy();

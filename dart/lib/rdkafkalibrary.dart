@@ -2,7 +2,8 @@
 import 'dart:ffi' as ffi;
 import 'package:ffi/ffi.dart';
 
-typedef cmsgcallback = ffi.Void Function(ffi.Pointer<Utf8>, ffi.Pointer<ffi.Uint8>, ffi.Uint64);
+typedef cmsgcallback = ffi.Void Function(ffi.Pointer<ffi.Void> consumer, ffi.Pointer<Utf8> topic,
+  ffi.Pointer<ffi.Uint8> data, ffi.Uint64 datalen);
 
 class RdkafkaLibrary {
   /// Holds the symbol lookup function.

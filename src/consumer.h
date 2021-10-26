@@ -14,10 +14,10 @@ class Consumer {
 public:
     Consumer(std::string broker, std::string topic,
         std::function<void(std::string topic, std::vector<uint8_t>)> msg_callback = nullptr,
-        std::function<void(const char* topic, uint8_t* data, uint64_t len)> cmsg_callback = nullptr);
+        std::function<void(void* consumer, const char* topic, uint8_t* data, uint64_t len)> cmsg_callback = nullptr);
     Consumer(std::string broker, std::vector<std::string> topics,
         std::function<void(std::string topic, std::vector<uint8_t>)> msg_callback = nullptr,
-        std::function<void(const char* topic, uint8_t* data, uint64_t len)> cmsg_callback = nullptr);
+        std::function<void(void* consumer, const char* topic, uint8_t* data, uint64_t len)> cmsg_callback = nullptr);
     virtual ~Consumer();
 
     void start(int timeout_ms=100);
@@ -42,6 +42,7 @@ private:
     std::map<std::string, RdKafka::Topic*> topic_handles;
     std::map<std::string, size_t> msgs_consumed_map;
     std::deque<RdKafka::Message*> queued_msgs;
+    std::deque<RdKafka::Message*> sent_msgs;
     std::string errstr;
     RdKafka::Conf* conf;
     RdKafka::Conf* tconf;
@@ -50,6 +51,6 @@ private:
     std::string alltopicsstr;
 
     std::function<void(std::string topic, std::vector<uint8_t> data)> msg_callback;
-    std::function<void(const char* topic, uint8_t* data, uint64_t len)> cmsg_callback;
+    std::function<void(void* consumer, const char* topic, uint8_t* data, uint64_t len)> cmsg_callback;
 };
 #endif

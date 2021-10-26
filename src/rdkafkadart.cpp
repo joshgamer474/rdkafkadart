@@ -2,7 +2,7 @@
 #include <consumer.h>
 
 void* create_consumer(char* broker, char** topics, int topics_len,
-  void (*cmsg_callback)(const char* topic, uint8_t* data, uint64_t len))
+  void (*cmsg_callback)(void* consumer, const char* topic, uint8_t* data, uint64_t len))
 {
     std::vector<std::string> topicsstr(topics, topics + topics_len);
     return new Consumer(broker, topicsstr, NULL, cmsg_callback);

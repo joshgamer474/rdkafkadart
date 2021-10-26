@@ -3,7 +3,7 @@
 
 Consumer::Consumer(std::string broker, std::string topic,
     std::function<void(std::string topic, std::vector<uint8_t>)> msg_callback,
-    std::function<void(const char* topic, uint8_t* data, uint64_t len)> cmsg_callback)
+    std::function<void(void* consumer, const char* topic, uint8_t* data, uint64_t len)> cmsg_callback)
     : broker(broker),
     msgs_consumed(0),
     run(false),
@@ -19,7 +19,7 @@ Consumer::Consumer(std::string broker, std::string topic,
 
 Consumer::Consumer(std::string broker, std::vector<std::string> topics,
     std::function<void(std::string topic, std::vector<uint8_t>)> msg_callback,
-    std::function<void(const char* topic, uint8_t* data, uint64_t len)> cmsg_callback)
+    std::function<void(void* consumer, const char* topic, uint8_t* data, uint64_t len)> cmsg_callback)
     : broker(broker),
     msgs_consumed(0),
     run(false),
@@ -39,6 +39,13 @@ Consumer::~Consumer()
     stop();
     // Delete remaining consumed Rdkafka::Messages
     for (RdKafka::Message* msg : queued_msgs)
+    {
+      if (msg)
+      {
+        delete msg;
+      }
+    }
+    for (RdKafka::Message* msg : sent_msgs)
     {
       if (msg)
       {
@@ -108,12 +115,14 @@ void Consumer::start(int timeout_ms)
           RdKafka::Message* msg = queued_msgs.front();
           // Call c callback for each message consumed
           cmsg_callback(
+            this,
             msg->topic_name().c_str(),
             (unsigned char*) msg->payload(),
             msg->len()
           );
+          sent_msgs.push_back(msg);
           queued_msgs.pop_front();
-          delete msg;
+          // msgs will be deleted on consumer destruction
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
