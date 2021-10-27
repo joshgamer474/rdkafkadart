@@ -1,6 +1,6 @@
 [settings]
 os=Android
-os.api_level=28
+os.api_level=20
 arch=armv7
 compiler=clang
 compiler.version=12

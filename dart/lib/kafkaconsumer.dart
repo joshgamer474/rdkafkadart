@@ -69,7 +69,7 @@ class KafkaConsumer {
   }
 
   /// Consume all topics from Kafka
-  Map<String, Map<int, Uint8List>>? consume(List<String> topics, {int timeout_ms = 100}) {
+  Map<String, Map<int, Uint8List>>? consume(List<String> topics, {int timeout_ms = 1000}) {
     if (_native_instance != null) {
       // Convert parameter topics to dart.ffi var
       final ffi.Pointer<ffi.Pointer<ffi.Int8>> topicsp = calloc(topics.length);

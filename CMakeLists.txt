@@ -28,7 +28,7 @@ endif()
 
 if(BUILD_ANDROID)
     set(ANDROID_STL c++_shared)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -fexceptions -frtti")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fexceptions -frtti")
 endif()
 
 target_include_directories(RdkafkaDart PUBLIC

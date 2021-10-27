@@ -159,7 +159,7 @@ RdKafka::ErrorCode Consumer::consume_msg(std::string topic, RdKafka::Message* ms
 {
     const RdKafka::Headers *headers;
     RdKafka::MessageTimestamp timestamp;
-    const void* buf;
+    void* buf;
     size_t len = 0;
     unsigned char* charbuf;
     std::vector<uint8_t> bufvec;
