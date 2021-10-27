@@ -12,15 +12,13 @@
 
 class Consumer {
 public:
-    Consumer(std::string broker, std::string topic,
+    Consumer(std::string broker,
         std::function<void(std::string topic, std::vector<uint8_t>)> msg_callback = nullptr,
-        std::function<void(void* consumer, const char* topic, uint8_t* data, uint64_t len)> cmsg_callback = nullptr);
-    Consumer(std::string broker, std::vector<std::string> topics,
-        std::function<void(std::string topic, std::vector<uint8_t>)> msg_callback = nullptr,
-        std::function<void(void* consumer, const char* topic, uint8_t* data, uint64_t len)> cmsg_callback = nullptr);
+        std::function<void(void* consumer, const char* topic, uint8_t* data,
+            uint64_t len, int64_t offset)> cmsg_callback = nullptr);
     virtual ~Consumer();
 
-    void start(int timeout_ms=100);
+    void start(const std::vector<std::string>& topics, int timeout_ms=100);
     void stop();
     bool is_running();
     const std::vector<std::string>& get_alltopics();
@@ -29,9 +27,11 @@ public:
     std::size_t msgs_consumed;
 
 private:
-    void init(std::vector<std::string> topics);
+    void init();
     void consume(int timeout_ms=100);
     RdKafka::ErrorCode consume_msg(std::string topic, RdKafka::Message* msg, void* opaque);
+    void clear_queuedmsgs();
+    void clear_sentmsgs();
 
     bool run;
     bool done_consuming;
@@ -51,6 +51,7 @@ private:
     std::string alltopicsstr;
 
     std::function<void(std::string topic, std::vector<uint8_t> data)> msg_callback;
-    std::function<void(void* consumer, const char* topic, uint8_t* data, uint64_t len)> cmsg_callback;
+    std::function<void(void* consumer, const char* topic,
+        uint8_t* data, uint64_t len, int64_t offset)> cmsg_callback;
 };
 #endif

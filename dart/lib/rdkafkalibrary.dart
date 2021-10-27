@@ -3,7 +3,7 @@ import 'dart:ffi' as ffi;
 import 'package:ffi/ffi.dart';
 
 typedef cmsgcallback = ffi.Void Function(ffi.Pointer<ffi.Void> consumer, ffi.Pointer<Utf8> topic,
-  ffi.Pointer<ffi.Uint8> data, ffi.Uint64 datalen);
+  ffi.Pointer<ffi.Uint8> data, ffi.Uint64 datalen, ffi.Int64 offset);
 
 class RdkafkaLibrary {
   /// Holds the symbol lookup function.
@@ -22,14 +22,10 @@ class RdkafkaLibrary {
 
   ffi.Pointer<ffi.Void> create_consumer(
     ffi.Pointer<ffi.Int8> broker,
-    ffi.Pointer<ffi.Pointer<ffi.Int8>> topics,
-    int topics_len,
     ffi.Pointer<ffi.NativeFunction<cmsgcallback>> cmsgcallback,
   ) {
     return _create_consumer(
       broker,
-      topics,
-      topics_len,
       cmsgcallback,
     );
   }
@@ -38,35 +34,43 @@ class RdkafkaLibrary {
       ffi.NativeFunction<
           ffi.Pointer<ffi.Void> Function(
               ffi.Pointer<ffi.Int8>,
-              ffi.Pointer<ffi.Pointer<ffi.Int8>>,
-              ffi.Int32,
               ffi.Pointer<
                   ffi.NativeFunction<
                     cmsgcallback>>)>>('create_consumer');
   late final _create_consumer = _create_consumerPtr.asFunction<
       ffi.Pointer<ffi.Void> Function(
           ffi.Pointer<ffi.Int8>,
-          ffi.Pointer<ffi.Pointer<ffi.Int8>>,
-          int,
           ffi.Pointer<
               ffi.NativeFunction<
                   cmsgcallback>>)>();
 
   void consume(
     ffi.Pointer<ffi.Void> consumer,
+    ffi.Pointer<ffi.Pointer<ffi.Int8>> topics,
+    int topicslen,
     int timeout_ms,
   ) {
     return _consume(
       consumer,
+      topics,
+      topicslen,
       timeout_ms,
     );
   }
 
   late final _consumePtr = _lookup<
       ffi.NativeFunction<
-          ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Int32)>>('consume');
+          ffi.Void Function(
+            ffi.Pointer<ffi.Void>,
+            ffi.Pointer<ffi.Pointer<ffi.Int8>>,
+            ffi.Int32,
+            ffi.Int32)>>('consume');
   late final _consume =
-      _consumePtr.asFunction<void Function(ffi.Pointer<ffi.Void>, int)>();
+      _consumePtr.asFunction<void Function(
+        ffi.Pointer<ffi.Void>,
+        ffi.Pointer<ffi.Pointer<ffi.Int8>>,
+        int,
+        int)>();
 
   void destroy_consumer(
     ffi.Pointer<ffi.Void> consumer,

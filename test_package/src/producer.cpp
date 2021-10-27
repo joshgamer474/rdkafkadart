@@ -24,8 +24,9 @@ TEST(ProducerTest, ProduceTest)
     producer->produce("p", testdata);
 
     // Create consumer to verify that producer produced message
-    std::unique_ptr<Consumer> consumer = std::make_unique<Consumer>(broker, "p", consumer_msg_callback);
-    consumer->start();
+    const std::vector<std::string> topics = { "p" };
+    std::unique_ptr<Consumer> consumer = std::make_unique<Consumer>(broker, consumer_msg_callback);
+    consumer->start(topics);
     std::this_thread::sleep_for(std::chrono::seconds(1));
     consumer->stop();
     

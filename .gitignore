@@ -1,6 +1,8 @@
 # See https://www.dartlang.org/guides/libraries/private-files
 
 # conan build folders
+apkg/
+*build/
 build/
 build_release/
 

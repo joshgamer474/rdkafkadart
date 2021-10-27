@@ -5,7 +5,8 @@ set(CMAKE_BINARY_DIR ${CMAKE_BINARY_DIR}/test_package)
 
 set(UNIT_TEST_SOURCE
     src/consumer.cpp
-    src/producer.cpp)
+    src/producer.cpp
+    src/rdkafkadart.cpp)
 
 include_directories(src)
 

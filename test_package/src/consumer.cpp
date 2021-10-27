@@ -16,7 +16,7 @@ void msg_callback(std::string topic, std::vector<uint8_t> data)
 TEST(ConsumerTest, ConsumerGetTopicsTest)
 {
     std::unique_ptr<Consumer> consumer = std::make_unique<Consumer>
-        ("192.168.1.55:9092", "SM7a_description", msg_callback);
+        ("192.168.1.55:9092", msg_callback);
     const auto alltopics = consumer->get_alltopics();
     printf("Found %zu topics\n", alltopics.size());
     EXPECT_GT(alltopics.size(), 0);
@@ -25,8 +25,9 @@ TEST(ConsumerTest, ConsumerGetTopicsTest)
 TEST(ConsumerTest, ConsumeTest)
 {
     std::unique_ptr<Consumer> consumer = std::make_unique<Consumer>
-        ("192.168.1.55:9092", "SM7a_description", msg_callback);
-    consumer->start();
+        ("192.168.1.55:9092", msg_callback);
+    const std::vector<std::string> topics = { "SM7a_description" };
+    consumer->start(topics);
     std::this_thread::sleep_for(std::chrono::seconds(2));
     consumer->stop();
     EXPECT_GT(consumer->msgs_consumed, 0);
@@ -34,10 +35,10 @@ TEST(ConsumerTest, ConsumeTest)
 
 TEST(ConsumerTest, ConsumeMultipleTest)
 {
-    std::vector<std::string> topics = { "SM7a_description", "SM7a" };
     std::unique_ptr<Consumer> consumer = std::make_unique<Consumer>
-        ("192.168.1.55:9092", topics, msg_callback);
-    consumer->start();
+        ("192.168.1.55:9092", msg_callback);
+    std::vector<std::string> topics = { "SM7a_description", "SM7a" };
+    consumer->start(topics);
     std::this_thread::sleep_for(std::chrono::seconds(2));
     consumer->stop();
     EXPECT_GT(consumer->msgs_consumed, 0);
