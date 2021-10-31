@@ -13,3 +13,5 @@ conan package . -bf=ax86build -pf=apkg
 conan package . -bf=ax86_64build -pf=apkg
 conan package . -bf=armv7build -pf=apkg
 conan package . -bf=armv8build -pf=apkg
+
+cp -r apkg/lib ../pokestonks_mobile/android/app/conan_deploy

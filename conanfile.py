@@ -17,7 +17,8 @@ class Rdkafka(ConanFile):
     generators = "cmake"
     requires = (
       "librdkafka/1.8.2",
-      "gtest/1.11.0"
+      "gtest/1.11.0",
+      "spdlog/1.9.2"
     )
     exports_sources = "src/*"
 

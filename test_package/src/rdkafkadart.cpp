@@ -109,9 +109,10 @@ TEST(RdkafkaDart, RdkafkaDartConsumerTestDestruction)
     // Create consumer
     void* consumer = create_consumer(broker.c_str(),
         msg_callback);
+    Consumer* con = static_cast<Consumer*>(consumer);
 
     // Destroy consumer
-    delete consumer;
+    delete con;
 
     // Create new consumer
     const std::vector<std::string> topics = {
@@ -121,16 +122,16 @@ TEST(RdkafkaDart, RdkafkaDartConsumerTestDestruction)
     consumer = create_consumer(broker.c_str(),
         msg_callback);
 
-    Consumer* cons = reinterpret_cast<Consumer*>(consumer);
+    con = static_cast<Consumer*>(consumer);
     // Consume topics async with synchronous msg_callback()
-    cons->start(topics);
+    con->start(topics);
     // Stop consumer thread after consuming is completed
-    cons->stop();
+    con->stop();
     // Restart consumer
-    cons->start(topics);
-    cons->stop();
-    const uint64_t msgs_consumed = cons->msgs_consumed;
-    const bool is_running = cons->is_running();
+    con->start(topics);
+    con->stop();
+    const uint64_t msgs_consumed = con->msgs_consumed;
+    const bool is_running = con->is_running();
     destroy_consumer(consumer);
 
     EXPECT_FALSE(is_running);

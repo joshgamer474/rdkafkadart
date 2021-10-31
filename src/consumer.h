@@ -7,7 +7,6 @@
 #include <thread>
 #include <deque>
 #include <vector>
-
 #include <librdkafka/rdkafkacpp.h>
 
 class Consumer {
