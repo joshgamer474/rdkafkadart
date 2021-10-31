@@ -8,13 +8,16 @@
 #include <deque>
 #include <vector>
 #include <librdkafka/rdkafkacpp.h>
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/rotating_file_sink.h>
 
 class Consumer {
 public:
     Consumer(std::string broker,
         std::function<void(std::string topic, std::vector<uint8_t>)> msg_callback = nullptr,
         std::function<void(void* consumer, const char* topic, uint8_t* data,
-            uint64_t len, int64_t offset)> cmsg_callback = nullptr);
+            uint64_t len, int64_t offset)> cmsg_callback = nullptr,
+        std::shared_ptr<spdlog::sinks::rotating_file_sink_mt> logsink = nullptr);
     virtual ~Consumer();
 
     void start(const std::vector<std::string>& topics, int timeout_ms=100);
@@ -32,6 +35,7 @@ private:
     void clear_queuedmsgs();
     void clear_sentmsgs();
 
+    std::shared_ptr<spdlog::logger> logger;
     bool run;
     bool done_consuming;
     int32_t partition;

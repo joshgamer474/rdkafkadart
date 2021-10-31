@@ -2,15 +2,19 @@
 #define _PRODUCER_H_
 #include <functional>
 #include <map>
+#include <memory>
 #include <string>
 #include <thread>
 #include <vector>
 #include <librdkafka/rdkafkacpp.h>
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/rotating_file_sink.h>
 
 class Producer {
 public:
     Producer(std::string broker,
-        std::function<void(std::string topic, std::vector<uint8_t>)> msg_callback = nullptr);
+        std::function<void(std::string topic, std::vector<uint8_t>)> msg_callback = nullptr,
+        std::shared_ptr<spdlog::sinks::rotating_file_sink_mt> logsink = nullptr);
     virtual ~Producer();
 
     void produce(std::string topic, const std::vector<uint8_t>& data);
@@ -20,6 +24,7 @@ public:
 private:
     void init();
 
+    std::shared_ptr<spdlog::logger> logger;
     bool run;
     int32_t partition;
     int64_t start_offset;

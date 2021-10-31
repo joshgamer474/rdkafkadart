@@ -1,11 +1,15 @@
 #include <consumer.h>
 #include <iostream>
+#include <stdlib.h>
+
 #include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 
 Consumer::Consumer(std::string broker,
     std::function<void(std::string topic, std::vector<uint8_t>)> msg_callback,
     std::function<void(void* consumer, const char* topic,
-        uint8_t* data, uint64_t len, int64_t offset)> cmsg_callback)
+        uint8_t* data, uint64_t len, int64_t offset)> cmsg_callback,
+    std::shared_ptr<spdlog::sinks::rotating_file_sink_mt> logsink)
     : broker(broker),
     msgs_consumed(0),
     run(false),
@@ -14,14 +18,26 @@ Consumer::Consumer(std::string broker,
     start_offset(RdKafka::Topic::OFFSET_BEGINNING),
     msg_callback(msg_callback),
     cmsg_callback(cmsg_callback),
+    topic_handles(std::map<std::string, RdKafka::Topic*>()),
     msgs_consumed_map(std::map<std::string, size_t>())
 {
+    if (logsink)
+    {
+        logger = std::make_shared<spdlog::logger>("Consumer", logsink);
+    }
+    else
+    {
+        long long int rnd = rand() % (715701992318);
+        logger = spdlog::stdout_color_mt(std::to_string(rnd));
+    }
+    logger->set_level(spdlog::level::trace);
+
     init();
 }
 
 Consumer::~Consumer()
 {
-    spdlog::info("~Consumer()");
+    logger->info("~Consumer()");
     //printf("Consumed %zu messages\n", msgs_consumed);
     stop();
     // Delete remaining consumed Rdkafka::Messages
@@ -40,14 +56,14 @@ void Consumer::init()
 
     // Create consumer
     consumer = RdKafka::Consumer::create(conf, errstr);
-    spdlog::info("Created consumer to Kafka broker: {}", broker.c_str());
+    logger->info("Created consumer to Kafka broker: {}", broker.c_str());
 
     // Get metadata from Kafka server
     RdKafka::Metadata* metadata;
     RdKafka::ErrorCode ret = consumer->metadata(true, NULL, &metadata, 200);
     if (ret != RdKafka::ERR_NO_ERROR)
     {
-        spdlog::error("Failed to acquire metadata, err: {}",
+        logger->error("Failed to acquire metadata, err: {}",
           RdKafka::err2str(ret));
         std::cerr << "%% Failed to acquire metadata: "
             << RdKafka::err2str(ret) << std::endl;
@@ -60,7 +76,7 @@ void Consumer::init()
         alltopicsstr += topic->topic() + ',';
     }
     alltopicsstr.pop_back();
-    spdlog::info("Acquired Kafka server metadata, topics {}",
+    logger->info("Acquired Kafka server metadata, topics {}",
       alltopicsstr.c_str());
 }
 
@@ -69,16 +85,17 @@ void Consumer::start(const std::vector<std::string>& topics, int timeout_ms)
     run = true;
     done_consuming = false;
     // Start consumer for topic+partition at start offset
-    for (auto& topic : topics) {
+    for (auto& topic : topics)
+    {
         // Create topic handle
-        spdlog::debug("Creating topic handle for topic {}", topic.c_str());
+        logger->debug("Creating topic handle for topic {}", topic.c_str());
         topic_handles[topic] = RdKafka::Topic::create(consumer, topic, tconf, errstr);
         msgs_consumed_map[topic] = 0;
         // Start consuming topic handle
-        spdlog::debug("Starting topic handle for topic {}", topic.c_str());
+        logger->debug("Starting topic handle for topic {}", topic.c_str());
         RdKafka::ErrorCode resp = consumer->start(topic_handles[topic], partition, start_offset);
         if (resp != RdKafka::ERR_NO_ERROR) {
-            spdlog::error("Failed to start consumer, err: {}",
+            logger->error("Failed to start consumer, err: {}",
                 RdKafka::err2str(resp));
             std::cerr << "Failed to start consumer: " <<
                 RdKafka::err2str(resp) << std::endl;
@@ -88,6 +105,10 @@ void Consumer::start(const std::vector<std::string>& topics, int timeout_ms)
     // Start consuming topics
     consume(timeout_ms);
 
+    logger->debug("Waiting until consuming is complete, queued_msgs.size(): {}, done_consuming: {}, cmsg_callback: {}",
+        queued_msgs.size(),
+        done_consuming,
+        cmsg_callback != nullptr);
     // Wait until consuming is complete if cmsg_callback is being used
     while ((!queued_msgs.empty() || done_consuming != true)
         && cmsg_callback != nullptr)
@@ -96,6 +117,9 @@ void Consumer::start(const std::vector<std::string>& topics, int timeout_ms)
         while (!queued_msgs.empty())
         {
           RdKafka::Message* msg = queued_msgs.front();
+          // Remove msg from queued_msgs
+          queued_msgs.pop_front();
+          logger->trace("Doing cmsg_callback() for msg {}", (void*)msg);
           // Call c callback for each message consumed
           cmsg_callback(
               this,
@@ -103,17 +127,18 @@ void Consumer::start(const std::vector<std::string>& topics, int timeout_ms)
               (unsigned char*)msg->payload(),
               msg->len(),
               msg->offset());
-          sent_msgs.push_back(msg);
-          queued_msgs.pop_front();
           // msgs will be deleted on consumer destruction
+          // Push to sent_msgs queue to be deleted later
+          sent_msgs.push_back(msg);
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
+    logger->debug("Reached bottom of start()");
 }
 
 void Consumer::consume(int timeout_ms)
 {
-    spdlog::info("Starting consume_thread");
+    logger->info("Starting consume_thread");
     consume_thread = std::thread([&]()
     {
         // Poll for kafka consumer events
@@ -123,7 +148,7 @@ void Consumer::consume(int timeout_ms)
         for (auto& pair : topic_handles)
         {
             // Consume topic for message
-            spdlog::debug("Consuming msgs on topic {}", pair.first.c_str());
+            logger->debug("Consuming msgs on topic {}", pair.first.c_str());
             RdKafka::Message *msg = consumer->consume(pair.second, partition, timeout_ms);
 
             // Consume all messages on a topic until there are no more messages to consume
@@ -160,10 +185,14 @@ void Consumer::consume(int timeout_ms)
                 delete msg;
             }
 
+            logger->debug("Consumed {} msgs on topic {}",
+                msgs_consumed_map[pair.first],
+                pair.first);
+
             //printf("Consumed %zu messages on topic %s\n",
             //    msgs_consumed_map[pair.first], pair.first);
         }
-        spdlog::info("consume_thread has finished running");
+        logger->info("consume_thread has finished running");
         done_consuming = true;
         printf("consume_thread finished running\n");
     });
@@ -222,13 +251,13 @@ RdKafka::ErrorCode Consumer::consume_msg(std::string topic, RdKafka::Message* ms
 
 void Consumer::stop()
 {
-    spdlog::info("stop() called, stopping consumer");
+    logger->info("stop() called, stopping consumer");
     run = false;
     if (consumer)
     {
         for (auto& pair : topic_handles)
         {
-            spdlog::info("Consumed {} messages on topic {}",
+            logger->info("Consumed {} messages on topic {}",
                 msgs_consumed_map[pair.first],
                 pair.first.c_str());
             printf("Consumed %zu messages on topic %s\n",
@@ -239,7 +268,7 @@ void Consumer::stop()
     }
     if (consume_thread.joinable())
     {
-        spdlog::info("Joining consume_thread");
+        logger->info("Joining consume_thread");
         printf("joining consume_thread\n");
         consume_thread.join();
     }
@@ -262,7 +291,7 @@ const std::string& Consumer::get_alltopicsstr()
 
 void Consumer::clear_queuedmsgs()
 {
-    spdlog::debug("Clearing queued messages queue");
+    logger->debug("Clearing queued messages queue");
     while (!queued_msgs.empty())
     {
         RdKafka::Message* msg = queued_msgs.front();
@@ -276,7 +305,7 @@ void Consumer::clear_queuedmsgs()
 
 void Consumer::clear_sentmsgs()
 {
-    spdlog::debug("Clearing sent messages queue");
+    logger->debug("Clearing sent messages queue");
     while (!sent_msgs.empty())
     {
         RdKafka::Message* msg = sent_msgs.front();

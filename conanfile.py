@@ -23,6 +23,7 @@ class Rdkafka(ConanFile):
     exports_sources = "src/*"
 
     #def configure(self):
+      #self.options["spdlog"].shared = self.options.shared
       #self.settings_target = getattr(self, 'settings_target', None)
       #self.options["gtest"].shared = self.options.shared
       #self.options["librdkafka"].shared = self.options.shared
