@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:path/path.dart' as path;
 import 'package:ffi/ffi.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'package:rdkafka_dart/rdkafkalibrary.dart';
 import 'package:rdkafka_dart/util/util.dart';
@@ -14,34 +15,45 @@ class KafkaConsumer {
   // Memory pointer to class
   ffi.Pointer<ffi.Void>? _native_instance;
   // Map to hold consumed messages in
-  static Map<ffi.Pointer<ffi.Void>, Map<String, Map<int, Uint8List>>> _consumed_msgs =
-    Map<ffi.Pointer<ffi.Void>, Map<String, Map<int, Uint8List>>>();
+  static Map<ffi.Pointer<ffi.Void>, Map<String, Map<int, Uint8List>>>
+      _consumed_msgs =
+      Map<ffi.Pointer<ffi.Void>, Map<String, Map<int, Uint8List>>>();
   // Map to hold marked for deletion messages
   Map<String, List<int>> _ackd_msgs = Map<String, List<int>>();
 
-  KafkaConsumer(String broker) {
-    init(broker);
-  }
+  final String broker;
 
-  void init(String broker) {
+  KafkaConsumer(String broker) : broker = broker {
     // Load rdkafka library
     _nativelib = RdkafkaLibrary(loadLibrary());
+  }
+
+  Future<void> create_consumer() async {
+    // Get app folder we can write logs to
+    final Directory dir = await getTemporaryDirectory();
+    final String temppath = dir.path;
+
+    // Convert temppath to dart.ffi var
+    ffi.Pointer<Utf8> temppathptr = temppath.toNativeUtf8().cast<Utf8>();
+    // Set log path for lib
+    print("Using path for logs: $temppath");
+    _nativelib.set_logpath(temppathptr);
 
     // Convert parameters to dart.ffi vars
     ffi.Pointer<ffi.Int8> brokerp = broker.toNativeUtf8().cast<ffi.Int8>();
 
     // Initialize Kafka Consumer instance
     _native_instance = _nativelib.create_consumer(
-        brokerp,
-        ffi.Pointer.fromFunction<cmsgcallback>(cmsg_callback));
+        brokerp, ffi.Pointer.fromFunction<cmsgcallback>(cmsg_callback));
   }
 
   /// RdKafka C message receive callback
-  static void cmsg_callback(ffi.Pointer<ffi.Void> consumer,
-    ffi.Pointer<Utf8> topic,
-    ffi.Pointer<ffi.Uint8> data,
-    int datalen, 
-    int offset) {
+  static void cmsg_callback(
+      ffi.Pointer<ffi.Void> consumer,
+      ffi.Pointer<Utf8> topic,
+      ffi.Pointer<ffi.Uint8> data,
+      int datalen,
+      int offset) {
     final String topicstr = topic.toDartString();
     final Uint8List datalist = data.asTypedList(datalen);
     final String datastr = utf8.decode(datalist);
@@ -54,7 +66,7 @@ class KafkaConsumer {
     }
     // Store received message to be accessed later from non-static method
     _consumed_msgs[consumer]![topicstr]![offset] = datalist;
-   // print("cmsg_callback() topic: $topicstr, datalen: ${datalen}, data: ${datastr}");
+    // print("cmsg_callback() topic: $topicstr, datalen: ${datalen}, data: ${datastr}");
   }
 
   /// Returns a List<String> containing the Kafka server's topics
@@ -63,13 +75,15 @@ class KafkaConsumer {
       return [];
     }
     // Get topics from consumer
-    ffi.Pointer<Utf8> topicsconsumed = _nativelib.get_topics_from_consumer(_native_instance!);
+    ffi.Pointer<Utf8> topicsconsumed =
+        _nativelib.get_topics_from_consumer(_native_instance!);
     final String topicsdatastr = topicsconsumed.toDartString();
     return topicsdatastr.split(',');
   }
 
   /// Consume all topics from Kafka
-  Map<String, Map<int, Uint8List>>? consume(List<String> topics, {int timeout_ms = 1000}) {
+  Map<String, Map<int, Uint8List>>? consume(List<String> topics,
+      {int timeout_ms = 1000}) {
     if (_native_instance != null) {
       // Convert parameter topics to dart.ffi var
       final ffi.Pointer<ffi.Pointer<ffi.Int8>> topicsp = calloc(topics.length);
@@ -91,12 +105,12 @@ class KafkaConsumer {
   void ack(String topic, int offset) {
     if (_consumed_msgs.containsKey(_native_instance)) {
       if (_consumed_msgs[_native_instance]!.containsKey(topic) &&
-        _consumed_msgs[_native_instance]![topic]!.containsKey(offset)) {
-          if (!_ackd_msgs.containsKey(topic)) {
-            _ackd_msgs[topic] = [];
-          }
-          _ackd_msgs[topic]!.add(offset);
+          _consumed_msgs[_native_instance]![topic]!.containsKey(offset)) {
+        if (!_ackd_msgs.containsKey(topic)) {
+          _ackd_msgs[topic] = [];
         }
+        _ackd_msgs[topic]!.add(offset);
+      }
     }
   }
 

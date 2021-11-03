@@ -2,6 +2,8 @@
 #define _CONSUMER_H_
 #include <functional>
 #include <map>
+#include <memory>
+#include <mutex>
 #include <string>
 #include <stddef.h>
 #include <thread>
@@ -34,16 +36,18 @@ private:
     RdKafka::ErrorCode consume_msg(std::string topic, RdKafka::Message* msg, void* opaque);
     void clear_queuedmsgs();
     void clear_sentmsgs();
+    void clear_topichandles();
 
     std::shared_ptr<spdlog::logger> logger;
     bool run;
     bool done_consuming;
     int32_t partition;
     int64_t start_offset;
-    std::thread consume_thread;
+    std::unique_ptr<std::thread> consume_thread;
     std::string broker;
     std::map<std::string, RdKafka::Topic*> topic_handles;
     std::map<std::string, size_t> msgs_consumed_map;
+    std::mutex queued_msgs_mutex;
     std::deque<RdKafka::Message*> queued_msgs;
     std::deque<RdKafka::Message*> sent_msgs;
     std::string errstr;

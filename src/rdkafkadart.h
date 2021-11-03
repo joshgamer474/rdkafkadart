@@ -22,6 +22,8 @@
 #define RDK_EXPORT IMPORT
 #endif
 
+// Log path init method
+RDK_EXPORT void set_logpath(const char* logpath);
 // Kafka Consumer methods
 RDK_EXPORT void* create_consumer(const char* broker,
   void (*cmsg_callback)(void* consumer, const char* topic,

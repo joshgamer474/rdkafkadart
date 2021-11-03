@@ -84,6 +84,9 @@ void Consumer::start(const std::vector<std::string>& topics, int timeout_ms)
 {
     run = true;
     done_consuming = false;
+    // Clear previous topichandles
+    clear_topichandles();
+
     // Start consumer for topic+partition at start offset
     for (auto& topic : topics)
     {
@@ -116,30 +119,39 @@ void Consumer::start(const std::vector<std::string>& topics, int timeout_ms)
         // Consume queued RdKafka::Messages
         while (!queued_msgs.empty())
         {
-          RdKafka::Message* msg = queued_msgs.front();
-          // Remove msg from queued_msgs
-          queued_msgs.pop_front();
-          logger->trace("Doing cmsg_callback() for msg {}", (void*)msg);
-          // Call c callback for each message consumed
-          cmsg_callback(
-              this,
-              msg->topic_name().c_str(),
-              (unsigned char*)msg->payload(),
-              msg->len(),
-              msg->offset());
-          // msgs will be deleted on consumer destruction
-          // Push to sent_msgs queue to be deleted later
-          sent_msgs.push_back(msg);
+            std::lock_guard<std::mutex> lg(queued_msgs_mutex);
+            RdKafka::Message* msg = queued_msgs.front();
+            // Remove msg from queued_msgs
+            queued_msgs.pop_front();
+            logger->trace("Doing cmsg_callback() for msg {}", (void*)msg);
+            // Call c callback for each message consumed
+            cmsg_callback(
+                this,
+                msg->topic_name().c_str(),
+                (unsigned char*)msg->payload(),
+                msg->len(),
+                msg->offset());
+            // msgs will be deleted on consumer destruction
+            // Push to sent_msgs queue to be deleted later
+            sent_msgs.push_back(msg);
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
     logger->debug("Reached bottom of start()");
+    //printf("Reached bottom of start()\n");
 }
 
 void Consumer::consume(int timeout_ms)
 {
+    if (consume_thread &&
+        consume_thread->joinable())
+    {
+        logger->info("joining joinable consume_thread");
+        //printf("joining consume_thread\n");
+        consume_thread->join();
+    }
     logger->info("Starting consume_thread");
-    consume_thread = std::thread([&]()
+    consume_thread = std::make_unique<std::thread>([&]()
     {
         // Poll for kafka consumer events
         consumer->poll(0);
@@ -194,8 +206,9 @@ void Consumer::consume(int timeout_ms)
         }
         logger->info("consume_thread has finished running");
         done_consuming = true;
-        printf("consume_thread finished running\n");
+        //printf("consume_thread finished running\n");
     });
+    consume_thread->detach();
 }
 
 RdKafka::ErrorCode Consumer::consume_msg(std::string topic, RdKafka::Message* msg, void* opaque)
@@ -208,9 +221,13 @@ RdKafka::ErrorCode Consumer::consume_msg(std::string topic, RdKafka::Message* ms
     std::vector<uint8_t> bufvec;
 
     if (msg->err() != RdKafka::ERR_NO_ERROR &&
-        msg->err() != RdKafka::ERR__TIMED_OUT)
+        msg->err() != RdKafka::ERR__TIMED_OUT &&
+        msg->err() != RdKafka::ERR__PARTITION_EOF)
     {
-        printf("consume_msg() msg->err(): %i %s\n", msg->err(), msg->errstr().c_str());
+        printf("consume_msg() msg->err(): %i %s on topic %s\n",
+            msg->err(),
+            msg->errstr().c_str(),
+            msg->topic_name().c_str());
     }
 
     switch (msg->err())
@@ -233,7 +250,8 @@ RdKafka::ErrorCode Consumer::consume_msg(std::string topic, RdKafka::Message* ms
             }
             if (cmsg_callback != nullptr)
             {
-              queued_msgs.push_back(msg);
+                std::lock_guard<std::mutex> lg(queued_msgs_mutex);
+                queued_msgs.push_back(msg);
             }
             msgs_consumed_map[topic]++;
             msgs_consumed++;
@@ -253,24 +271,13 @@ void Consumer::stop()
 {
     logger->info("stop() called, stopping consumer");
     run = false;
-    if (consumer)
-    {
-        for (auto& pair : topic_handles)
-        {
-            logger->info("Consumed {} messages on topic {}",
-                msgs_consumed_map[pair.first],
-                pair.first.c_str());
-            printf("Consumed %zu messages on topic %s\n",
-                msgs_consumed_map[pair.first],
-                pair.first.c_str());
-            consumer->stop(pair.second, partition);
-        }
-    }
-    if (consume_thread.joinable())
+    clear_topichandles();
+    if (consume_thread &&
+        consume_thread->joinable())
     {
         logger->info("Joining consume_thread");
-        printf("joining consume_thread\n");
-        consume_thread.join();
+        //printf("joining consume_thread\n");
+        consume_thread->join();
     }
 }
 
@@ -287,6 +294,26 @@ const std::vector<std::string>& Consumer::get_alltopics()
 const std::string& Consumer::get_alltopicsstr()
 {
     return alltopicsstr;
+}
+
+void Consumer::clear_topichandles()
+{
+    if (consumer == nullptr)
+    {
+        return;
+    }
+    for (auto& pair : topic_handles)
+    {
+        logger->info("Consumed {} messages on topic {}",
+            msgs_consumed_map[pair.first],
+            pair.first.c_str());
+        //printf("Consumed %zu messages on topic %s\n",
+        //    msgs_consumed_map[pair.first],
+        //    pair.first.c_str());
+        consumer->stop(pair.second, partition);
+        delete pair.second;
+    }
+    topic_handles.clear();
 }
 
 void Consumer::clear_queuedmsgs()

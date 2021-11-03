@@ -9,13 +9,13 @@
 /*
 // Kafka Consumer methods
 RDK_EXPORT void* create_consumer(char* broker, char** topics, int topics_len,
-  void (*cmsg_callback)(void* consumer, const char* topic, uint8_t* data, uint64_t len));
+  void (*ccmsg_callback)(void* consumer, const char* topic, uint8_t* data, uint64_t len));
 RDK_EXPORT void consume(void* consumer, int timeout_ms = 100);
 RDK_EXPORT void destroy_consumer(void* consumer);
 RDK_EXPORT const char* get_topics_from_consumer(void* consumer);
 */
 
-void msg_callback(void* consumer, const char* topic,
+void cmsg_callback(void* consumer, const char* topic,
     uint8_t* data, uint64_t len, int64_t offset)
 {
     const std::string datastr = reinterpret_cast<char *>(data);
@@ -30,7 +30,7 @@ const std::string broker = "192.168.1.55:9092";
 TEST(RdkafkaDart, RdkafkaDartCreateConsumer)
 {
     void* consumer = create_consumer(broker.c_str(),
-        msg_callback);
+        cmsg_callback);
 
     Consumer* cons = reinterpret_cast<Consumer*>(consumer);
     const uint64_t msgs_consumed = cons->msgs_consumed;
@@ -44,7 +44,7 @@ TEST(RdkafkaDart, RdkafkaDartCreateConsumer)
 TEST(RdkafkaDart, RdkafkaDartGetTopicsTest)
 {
     void* consumer = create_consumer(broker.c_str(),
-        msg_callback);
+        cmsg_callback);
 
     Consumer* cons = reinterpret_cast<Consumer*>(consumer);
     const std::string topicsstr = cons->get_alltopicsstr();
@@ -65,9 +65,9 @@ TEST(RdkafkaDart, RdkafkaDartConsumerConsume)
     };
 
     void* consumer = create_consumer(broker.c_str(),
-        msg_callback);
+        cmsg_callback);
     Consumer* cons = reinterpret_cast<Consumer*>(consumer);
-    // Consume topics async with synchronous msg_callback()
+    // Consume topics async with synchronous cmsg_callback()
     cons->start(topics);
     // Stop consumer thread after consuming is completed
     cons->stop();
@@ -85,19 +85,34 @@ TEST(RdkafkaDart, RdkafkaDartConsumerConsumeStressTest)
         "SM11b",
         "SM11b_description"
     };
+    const std::vector<std::string> topics2 = {
+        "SM11",
+        "SM11_description"
+    };
+    const std::vector<std::string> topics3 = {
+        "SM10",
+        "SM10_description"
+    };
     void* consumer = create_consumer(broker.c_str(),
-        msg_callback);
+        cmsg_callback);
 
     Consumer* cons = reinterpret_cast<Consumer*>(consumer);
-    // Consume topics async with synchronous msg_callback()
+    // Consume topics async with synchronous cmsg_callback()
     cons->start(topics);
     // Stop consumer thread after consuming is completed
+    //cons->stop();
+    // Consume new set of topics
+    cons->start(topics2);
+    // Consume new set of topics again
+    cons->start(topics3);
+    // Stop consuming
     cons->stop();
-    // Restart consumer
-    cons->start(topics);
-    cons->stop();
+
+    // Get checkable variables
     const uint64_t msgs_consumed = cons->msgs_consumed;
     const bool is_running = cons->is_running();
+
+    // Destroy consumer
     destroy_consumer(consumer);
 
     EXPECT_FALSE(is_running);
@@ -108,7 +123,7 @@ TEST(RdkafkaDart, RdkafkaDartConsumerTestDestruction)
 {
     // Create consumer
     void* consumer = create_consumer(broker.c_str(),
-        msg_callback);
+        cmsg_callback);
     Consumer* con = static_cast<Consumer*>(consumer);
 
     // Destroy consumer
@@ -120,10 +135,10 @@ TEST(RdkafkaDart, RdkafkaDartConsumerTestDestruction)
         "SM11b_description"
     };
     consumer = create_consumer(broker.c_str(),
-        msg_callback);
+        cmsg_callback);
 
     con = static_cast<Consumer*>(consumer);
-    // Consume topics async with synchronous msg_callback()
+    // Consume topics async with synchronous cmsg_callback()
     con->start(topics);
     // Stop consumer thread after consuming is completed
     con->stop();

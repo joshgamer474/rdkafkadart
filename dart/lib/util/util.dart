@@ -4,13 +4,18 @@ import 'package:path/path.dart' as path;
 
 /// Returns rdkafka library path
 String getLibraryPath({String? libpath}) {
-  var libraryPath = path.join(Directory.current.parent.path, 'build_release', 'lib', 'libRdkafkaDart.so');
+  var libraryPath = path.join(Directory.current.parent.path, 'build_release',
+      'lib', 'libRdkafkaDart.so');
   if (Platform.isMacOS) {
-    libraryPath = path.join(Directory.current.parent.path, 'build_release', 'bin', 'Rdkafka.dylib');
+    libraryPath = path.join(
+        Directory.current.parent.path, 'build_release', 'bin', 'Rdkafka.dylib');
   } else if (Platform.isWindows) {
-    libraryPath = path.join(Directory.current.parent.path, 'build_release', 'bin', 'RdkafkaDart.dll');
+    libraryPath = path.join(Directory.current.parent.path, 'build_release',
+        'bin', 'RdkafkaDart.dll');
   } else if (Platform.isAndroid) {
     libraryPath = path.join('libRdkafkaDart.so');
+  } else if (Platform.isIOS) {
+    libraryPath = path.join('libRdkafkaDart.dylib');
   }
   //print("libraryPath: $libraryPath");
   return libraryPath;

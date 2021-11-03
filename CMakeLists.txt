@@ -26,10 +26,15 @@ else()
     add_library(RdkafkaDart STATIC ${RDKAFKA_SOURCE} ${RDKAFKA_HEADERS})
 endif()
 
+# Android flags
 if(BUILD_ANDROID)
     set(ANDROID_STL c++_shared)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -fexceptions -frtti")
     add_compile_definitions(RdkafkaDart_ANDROID)
+endif()
+# iOS flags
+if(BUILD_IOS)
+    add_compile_definitions(RdkafkaDart_IOS)
 endif()
 
 target_include_directories(RdkafkaDart PUBLIC

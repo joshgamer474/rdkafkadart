@@ -2,8 +2,12 @@
 import 'dart:ffi' as ffi;
 import 'package:ffi/ffi.dart';
 
-typedef cmsgcallback = ffi.Void Function(ffi.Pointer<ffi.Void> consumer, ffi.Pointer<Utf8> topic,
-  ffi.Pointer<ffi.Uint8> data, ffi.Uint64 datalen, ffi.Int64 offset);
+typedef cmsgcallback = ffi.Void Function(
+    ffi.Pointer<ffi.Void> consumer,
+    ffi.Pointer<Utf8> topic,
+    ffi.Pointer<ffi.Uint8> data,
+    ffi.Uint64 datalen,
+    ffi.Int64 offset);
 
 class RdkafkaLibrary {
   /// Holds the symbol lookup function.
@@ -20,6 +24,19 @@ class RdkafkaLibrary {
           lookup)
       : _lookup = lookup;
 
+  /// set_logpath()
+  void set_logpath(ffi.Pointer<Utf8> logpath) {
+    return _set_logpath(
+      logpath,
+    );
+  }
+
+  late final _set_logpathPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<Utf8>)>>(
+          'set_logpath');
+  late final _set_logpath =
+      _set_logpathPtr.asFunction<void Function(ffi.Pointer<Utf8>)>();
+
   ffi.Pointer<ffi.Void> create_consumer(
     ffi.Pointer<ffi.Int8> broker,
     ffi.Pointer<ffi.NativeFunction<cmsgcallback>> cmsgcallback,
@@ -31,18 +48,13 @@ class RdkafkaLibrary {
   }
 
   late final _create_consumerPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Pointer<ffi.Void> Function(
-              ffi.Pointer<ffi.Int8>,
-              ffi.Pointer<
-                  ffi.NativeFunction<
-                    cmsgcallback>>)>>('create_consumer');
+          ffi.NativeFunction<
+              ffi.Pointer<ffi.Void> Function(ffi.Pointer<ffi.Int8>,
+                  ffi.Pointer<ffi.NativeFunction<cmsgcallback>>)>>(
+      'create_consumer');
   late final _create_consumer = _create_consumerPtr.asFunction<
-      ffi.Pointer<ffi.Void> Function(
-          ffi.Pointer<ffi.Int8>,
-          ffi.Pointer<
-              ffi.NativeFunction<
-                  cmsgcallback>>)>();
+      ffi.Pointer<ffi.Void> Function(ffi.Pointer<ffi.Int8>,
+          ffi.Pointer<ffi.NativeFunction<cmsgcallback>>)>();
 
   void consume(
     ffi.Pointer<ffi.Void> consumer,
@@ -61,16 +73,13 @@ class RdkafkaLibrary {
   late final _consumePtr = _lookup<
       ffi.NativeFunction<
           ffi.Void Function(
-            ffi.Pointer<ffi.Void>,
-            ffi.Pointer<ffi.Pointer<ffi.Int8>>,
-            ffi.Int32,
-            ffi.Int32)>>('consume');
-  late final _consume =
-      _consumePtr.asFunction<void Function(
-        ffi.Pointer<ffi.Void>,
-        ffi.Pointer<ffi.Pointer<ffi.Int8>>,
-        int,
-        int)>();
+              ffi.Pointer<ffi.Void>,
+              ffi.Pointer<ffi.Pointer<ffi.Int8>>,
+              ffi.Int32,
+              ffi.Int32)>>('consume');
+  late final _consume = _consumePtr.asFunction<
+      void Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Pointer<ffi.Int8>>,
+          int, int)>();
 
   void destroy_consumer(
     ffi.Pointer<ffi.Void> consumer,
@@ -86,19 +95,14 @@ class RdkafkaLibrary {
   late final _destroy_consumer =
       _destroy_consumerPtr.asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 
-  ffi.Pointer<Utf8> get_topics_from_consumer(
-    ffi.Pointer<ffi.Void> consumer
-  ) {
-    return _get_topics_from_consumer(
-      consumer
-    );
+  ffi.Pointer<Utf8> get_topics_from_consumer(ffi.Pointer<ffi.Void> consumer) {
+    return _get_topics_from_consumer(consumer);
   }
 
   late final _get_topics_from_consumerPtr = _lookup<
       ffi.NativeFunction<
           ffi.Pointer<Utf8> Function(
               ffi.Pointer<ffi.Void>)>>('get_topics_from_consumer');
-  late final _get_topics_from_consumer =
-      _get_topics_from_consumerPtr.asFunction<
-          ffi.Pointer<Utf8> Function(ffi.Pointer<ffi.Void>)>();
+  late final _get_topics_from_consumer = _get_topics_from_consumerPtr
+      .asFunction<ffi.Pointer<Utf8> Function(ffi.Pointer<ffi.Void>)>();
 }

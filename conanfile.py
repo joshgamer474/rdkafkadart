@@ -9,9 +9,9 @@ class Rdkafka(ConanFile):
     version = "1.8.2"
     settings = "os", "compiler", "arch"
     options = {"shared": [True, False]}
-    settings = {"os" : ["Windows", "Linux", "Android"], 
+    settings = {"os" : ["Windows", "Linux", "Macos", "Android", "iOS"], 
       "arch": ["x86", "x86_64", "armv7", "armv8"],
-      "compiler": ["Visual Studio", "gcc", "clang"],
+      "compiler": ["Visual Studio", "gcc", "clang", "apple-clang"],
       "build_type": ["Debug", "Release"]}
     default_options = "shared=True"
     generators = "cmake"
@@ -44,10 +44,12 @@ class Rdkafka(ConanFile):
     def _configure_cmake(self):
       cmake = CMake(self)
       cmake.definitions["BUILD_UNIT_TEST"] = "true"
-      if (self.settings.os == "Windows"):
+      if self.settings.os == "Windows":
         cmake.definitions["CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS"] = "true"
-      if (self.settings.os == "Android"):
+      if self.settings.os == "Android":
         cmake.definitions["BUILD_ANDROID"] = "true"
+      if self.settings.os == "iOS":
+        cmake.definitions["BUILD_IOS"] = "true"
       cmake.configure()
       return cmake
 
@@ -74,6 +76,7 @@ class Rdkafka(ConanFile):
       self.copy("*.h", src="include", dst="include")
       #self.copy("*.a", src="lib", dst=libDest, keep_path=False)
       self.copy("*.so", src="lib", dst=libDest, keep_path=False)
+      self.copy("*.dylib", src="lib", dst=libDest, keep_path=False)
 
     def package_info(self):
       self.cpp_info.libs = ["rdkafka-dart"]
