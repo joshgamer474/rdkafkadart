@@ -41,6 +41,7 @@ private:
     std::shared_ptr<spdlog::logger> logger;
     bool run;
     bool done_consuming;
+    bool stop_consumer_thread;
     int32_t partition;
     int64_t start_offset;
     std::unique_ptr<std::thread> consume_thread;
@@ -48,6 +49,7 @@ private:
     std::map<std::string, RdKafka::Topic*> topic_handles;
     std::map<std::string, size_t> msgs_consumed_map;
     std::mutex queued_msgs_mutex;
+    std::mutex sent_msgs_mutex;
     std::deque<RdKafka::Message*> queued_msgs;
     std::deque<RdKafka::Message*> sent_msgs;
     std::string errstr;

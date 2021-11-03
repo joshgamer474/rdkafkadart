@@ -14,6 +14,7 @@ Consumer::Consumer(std::string broker,
     msgs_consumed(0),
     run(false),
     done_consuming(false),
+    stop_consumer_thread(false),
     partition(0),
     start_offset(RdKafka::Topic::OFFSET_BEGINNING),
     msg_callback(msg_callback),
@@ -132,6 +133,7 @@ void Consumer::start(const std::vector<std::string>& topics, int timeout_ms)
                 msg->len(),
                 msg->offset());
             // msgs will be deleted on consumer destruction
+            std::lock_guard<std::mutex> lgs(sent_msgs_mutex);
             // Push to sent_msgs queue to be deleted later
             sent_msgs.push_back(msg);
         }
@@ -143,72 +145,87 @@ void Consumer::start(const std::vector<std::string>& topics, int timeout_ms)
 
 void Consumer::consume(int timeout_ms)
 {
+    if (consume_thread)
+    {
+        return;
+    }
+    /*
     if (consume_thread &&
         consume_thread->joinable())
     {
         logger->info("joining joinable consume_thread");
         //printf("joining consume_thread\n");
         consume_thread->join();
-    }
+    }*/
     logger->info("Starting consume_thread");
     consume_thread = std::make_unique<std::thread>([&]()
     {
-        // Poll for kafka consumer events
-        consumer->poll(0);
-
-        // Consume each topic one at a time
-        for (auto& pair : topic_handles)
+        while (!stop_consumer_thread)
         {
-            // Consume topic for message
-            logger->debug("Consuming msgs on topic {}", pair.first.c_str());
-            RdKafka::Message *msg = consumer->consume(pair.second, partition, timeout_ms);
-
-            // Consume all messages on a topic until there are no more messages to consume
-            while (msg != nullptr && run == true)
+            if (topic_handles.empty() || consumer == nullptr)
             {
-                // Process message
-                if (msg != nullptr)
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                continue;
+            }
+            // Poll for kafka consumer events
+            consumer->poll(0);
+
+            // Consume each topic one at a time
+            for (auto& pair : topic_handles)
+            {
+                // Consume topic for message
+                logger->debug("Consuming msgs on topic {}", pair.first.c_str());
+                RdKafka::Message *msg = consumer->consume(pair.second, partition, timeout_ms);
+
+                // Consume all messages on a topic until there are no more messages to consume
+                while (msg != nullptr && run == true)
                 {
-                    RdKafka::ErrorCode ret = consume_msg(pair.first, msg, NULL);
-                    if (ret == RdKafka::ErrorCode::ERR__PARTITION_EOF)
-                    {   // Reached end of partition for this topic
+                    // Process message
+                    if (msg != nullptr)
+                    {
+                        RdKafka::ErrorCode ret = consume_msg(pair.first, msg, NULL);
+                        if (ret == RdKafka::ErrorCode::ERR__PARTITION_EOF)
+                        {   // Reached end of partition for this topic
+                            break;
+                        }
+                    }
+                    else
+                    {
                         break;
                     }
-                }
-                else
-                {
-                    break;
+
+                    if (cmsg_callback == nullptr)
+                    {   // Delete message memory immediately
+                        delete msg;
+                    }
+
+                    // Poll for more kafka consumer events
+                    consumer->poll(0);
+
+                    // Consume next message
+                    msg = consumer->consume(pair.second, partition, timeout_ms);
                 }
 
-                if (cmsg_callback == nullptr)
-                {   // Delete message memory immediately
+                if (msg && cmsg_callback == nullptr)
+                {
                     delete msg;
                 }
 
-                // Poll for more kafka consumer events
-                consumer->poll(0);
+                logger->debug("Consumed {} msgs on topic {}",
+                    msgs_consumed_map[pair.first],
+                    pair.first);
 
-                // Consume next message
-                msg = consumer->consume(pair.second, partition, timeout_ms);
+                //printf("Consumed %zu messages on topic %s\n",
+                //    msgs_consumed_map[pair.first], pair.first);
             }
-
-            if (msg && cmsg_callback == nullptr)
-            {
-                delete msg;
-            }
-
-            logger->debug("Consumed {} msgs on topic {}",
-                msgs_consumed_map[pair.first],
-                pair.first);
-
-            //printf("Consumed %zu messages on topic %s\n",
-            //    msgs_consumed_map[pair.first], pair.first);
-        }
-        logger->info("consume_thread has finished running");
-        done_consuming = true;
-        //printf("consume_thread finished running\n");
+            logger->info("consume_thread has finished running");
+            done_consuming = true;
+            //printf("consume_thread finished running\n");
+            // Clear topichandles to end topic consumption
+            clear_topichandles();
+        } // end while(!stop_consumer_thread)
     });
-    consume_thread->detach();
+    //consume_thread->detach();
 }
 
 RdKafka::ErrorCode Consumer::consume_msg(std::string topic, RdKafka::Message* msg, void* opaque)
@@ -271,6 +288,7 @@ void Consumer::stop()
 {
     logger->info("stop() called, stopping consumer");
     run = false;
+    stop_consumer_thread = true;
     clear_topichandles();
     if (consume_thread &&
         consume_thread->joinable())
@@ -278,6 +296,7 @@ void Consumer::stop()
         logger->info("Joining consume_thread");
         //printf("joining consume_thread\n");
         consume_thread->join();
+        consume_thread = nullptr;
     }
 }
 
@@ -321,6 +340,7 @@ void Consumer::clear_queuedmsgs()
     logger->debug("Clearing queued messages queue");
     while (!queued_msgs.empty())
     {
+        std::lock_guard<std::mutex> lg(queued_msgs_mutex);
         RdKafka::Message* msg = queued_msgs.front();
         queued_msgs.pop_front();
         if (msg)
@@ -335,6 +355,7 @@ void Consumer::clear_sentmsgs()
     logger->debug("Clearing sent messages queue");
     while (!sent_msgs.empty())
     {
+        std::lock_guard<std::mutex> lg(sent_msgs_mutex);
         RdKafka::Message* msg = sent_msgs.front();
         sent_msgs.pop_front();
         if (msg)
