@@ -85,6 +85,7 @@ void Consumer::start(const std::vector<std::string>& topics, int timeout_ms)
 {
     run = true;
     done_consuming = false;
+    stop_consumer_thread = false;
     // Clear previous topichandles
     clear_topichandles();
 
