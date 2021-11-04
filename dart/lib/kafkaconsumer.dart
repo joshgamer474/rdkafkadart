@@ -56,7 +56,6 @@ class KafkaConsumer {
       int offset) {
     final String topicstr = topic.toDartString();
     final Uint8List datalist = data.asTypedList(datalen);
-    final String datastr = utf8.decode(datalist);
     // Ensure _consumed_msgs is properly initialized
     if (!_consumed_msgs.containsKey(consumer)) {
       _consumed_msgs[consumer] = Map<String, Map<int, Uint8List>>();
@@ -66,6 +65,7 @@ class KafkaConsumer {
     }
     // Store received message to be accessed later from non-static method
     _consumed_msgs[consumer]![topicstr]![offset] = datalist;
+    //final String datastr = utf8.decode(datalist);
     // print("cmsg_callback() topic: $topicstr, datalen: ${datalen}, data: ${datastr}");
   }
 
@@ -121,11 +121,18 @@ class KafkaConsumer {
     if (_consumed_msgs.containsKey(_native_instance)) {
       _ackd_msgs.forEach((topic, offsetlist) {
         if (_consumed_msgs[_native_instance]!.containsKey(topic)) {
-          offsetlist.forEach((offset) {
-            if (_consumed_msgs[_native_instance]![topic]!.containsKey(offset)) {
-              _consumed_msgs[_native_instance]![topic]!.remove(offset);
-            }
-          });
+          // Check if the whole list can be cleared
+          if (offsetlist.length == _consumed_msgs[_native_instance]![topic]!.length) {
+            // Clear all consumed msgs for this topic
+            _consumed_msgs[_native_instance]![topic]!.clear();
+          } else {
+            // Clear some ack'd consumed msgs only
+            offsetlist.forEach((offset) {
+              if (_consumed_msgs[_native_instance]![topic]!.containsKey(offset)) {
+                _consumed_msgs[_native_instance]![topic]!.remove(offset);
+              }
+            });
+          }
           // Check if topic is now empty, remove its key if so
           if (_consumed_msgs[_native_instance]![topic]!.isEmpty) {
             _consumed_msgs[_native_instance]!.remove(topic);
