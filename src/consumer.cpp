@@ -141,7 +141,6 @@ void Consumer::start(const std::vector<std::string>& topics, int timeout_ms)
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
     logger->debug("Reached bottom of start()");
-    //printf("Reached bottom of start()\n");
 }
 
 void Consumer::consume(int timeout_ms)
@@ -150,14 +149,6 @@ void Consumer::consume(int timeout_ms)
     {
         return;
     }
-    /*
-    if (consume_thread &&
-        consume_thread->joinable())
-    {
-        logger->info("joining joinable consume_thread");
-        //printf("joining consume_thread\n");
-        consume_thread->join();
-    }*/
     logger->info("Starting consume_thread");
     consume_thread = std::make_unique<std::thread>([&]()
     {
@@ -215,18 +206,13 @@ void Consumer::consume(int timeout_ms)
                 logger->debug("Consumed {} msgs on topic {}",
                     msgs_consumed_map[pair.first],
                     pair.first);
-
-                //printf("Consumed %zu messages on topic %s\n",
-                //    msgs_consumed_map[pair.first], pair.first);
             }
             logger->info("consume_thread has finished running");
             done_consuming = true;
-            //printf("consume_thread finished running\n");
             // Clear topichandles to end topic consumption
             clear_topichandles();
         } // end while(!stop_consumer_thread)
     });
-    //consume_thread->detach();
 }
 
 RdKafka::ErrorCode Consumer::consume_msg(std::string topic, RdKafka::Message* msg, void* opaque)
@@ -238,21 +224,12 @@ RdKafka::ErrorCode Consumer::consume_msg(std::string topic, RdKafka::Message* ms
     unsigned char* charbuf;
     std::vector<uint8_t> bufvec;
 
-    if (msg->err() != RdKafka::ERR_NO_ERROR &&
-        msg->err() != RdKafka::ERR__TIMED_OUT &&
-        msg->err() != RdKafka::ERR__PARTITION_EOF)
-    {
-        printf("consume_msg() msg->err(): %i %s on topic %s\n",
-            msg->err(),
-            msg->errstr().c_str(),
-            msg->topic_name().c_str());
-    }
-
     switch (msg->err())
     {
         case RdKafka::ERR__TIMED_OUT:
             break;
         case RdKafka::ERR_NO_ERROR:
+            // Forward msg through C++ msg_callback() immediately
             if (msg_callback != nullptr)
             {   // Get data from *msg
                 headers = msg->headers();
@@ -266,6 +243,7 @@ RdKafka::ErrorCode Consumer::consume_msg(std::string topic, RdKafka::Message* ms
                 // Call msg callback with data
                 msg_callback(topic, bufvec);
             }
+            // Queue msg for C cmsg_callback() in parent thread
             if (cmsg_callback != nullptr)
             {
                 std::lock_guard<std::mutex> lg(queued_msgs_mutex);
@@ -295,7 +273,6 @@ void Consumer::stop()
         consume_thread->joinable())
     {
         logger->info("Joining consume_thread");
-        //printf("joining consume_thread\n");
         consume_thread->join();
         consume_thread = nullptr;
     }
@@ -327,9 +304,6 @@ void Consumer::clear_topichandles()
         logger->info("Consumed {} messages on topic {}",
             msgs_consumed_map[pair.first],
             pair.first.c_str());
-        //printf("Consumed %zu messages on topic %s\n",
-        //    msgs_consumed_map[pair.first],
-        //    pair.first.c_str());
         consumer->stop(pair.second, partition);
         delete pair.second;
     }

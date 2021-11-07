@@ -51,7 +51,7 @@ void* create_consumer(const char* broker,
     logger->set_level(spdlog::level::debug);
     logger->info("create_consumer() creating consumer");
     void* ret = new Consumer(broker, NULL, cmsg_callback, filesink);
-    logger->info("create_consumer() consumer {}, to broker {}", ret, broker);
+    logger->info("create_consumer() created consumer {} to broker {}", ret, broker);
     logger->flush();
     return ret;
 }
