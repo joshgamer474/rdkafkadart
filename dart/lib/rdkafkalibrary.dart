@@ -30,13 +30,26 @@ class RdkafkaLibrary {
       logpath,
     );
   }
-
   late final _set_logpathPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<Utf8>)>>(
           'set_logpath');
   late final _set_logpath =
       _set_logpathPtr.asFunction<void Function(ffi.Pointer<Utf8>)>();
 
+  /// set_loglevel()
+  void set_loglevel(ffi.Pointer<Utf8> logpath) {
+    return _set_loglevel(
+      logpath,
+    );
+  }
+  late final _set_loglevelPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<Utf8>)>>(
+          'set_loglevel');
+  late final _set_loglevel =
+      _set_loglevelPtr.asFunction<void Function(ffi.Pointer<Utf8>)>();
+
+  /// Kafka Consumer methods
+  // create_consumer()
   ffi.Pointer<ffi.Void> create_consumer(
     ffi.Pointer<ffi.Int8> broker,
     ffi.Pointer<ffi.NativeFunction<cmsgcallback>> cmsgcallback,
@@ -46,7 +59,6 @@ class RdkafkaLibrary {
       cmsgcallback,
     );
   }
-
   late final _create_consumerPtr = _lookup<
           ffi.NativeFunction<
               ffi.Pointer<ffi.Void> Function(ffi.Pointer<ffi.Int8>,
@@ -56,6 +68,7 @@ class RdkafkaLibrary {
       ffi.Pointer<ffi.Void> Function(ffi.Pointer<ffi.Int8>,
           ffi.Pointer<ffi.NativeFunction<cmsgcallback>>)>();
 
+  // consume()
   void consume(
     ffi.Pointer<ffi.Void> consumer,
     ffi.Pointer<ffi.Pointer<ffi.Int8>> topics,
@@ -69,7 +82,6 @@ class RdkafkaLibrary {
       timeout_ms,
     );
   }
-
   late final _consumePtr = _lookup<
       ffi.NativeFunction<
           ffi.Void Function(
@@ -81,6 +93,7 @@ class RdkafkaLibrary {
       void Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Pointer<ffi.Int8>>,
           int, int)>();
 
+  // destroy_consumer()
   void destroy_consumer(
     ffi.Pointer<ffi.Void> consumer,
   ) {
@@ -88,21 +101,78 @@ class RdkafkaLibrary {
       consumer,
     );
   }
-
   late final _destroy_consumerPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
           'destroy_consumer');
   late final _destroy_consumer =
       _destroy_consumerPtr.asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 
+  // get_topics_from_consumer()
   ffi.Pointer<Utf8> get_topics_from_consumer(ffi.Pointer<ffi.Void> consumer) {
     return _get_topics_from_consumer(consumer);
   }
-
   late final _get_topics_from_consumerPtr = _lookup<
       ffi.NativeFunction<
           ffi.Pointer<Utf8> Function(
               ffi.Pointer<ffi.Void>)>>('get_topics_from_consumer');
   late final _get_topics_from_consumer = _get_topics_from_consumerPtr
       .asFunction<ffi.Pointer<Utf8> Function(ffi.Pointer<ffi.Void>)>();
+
+
+  /// Kafka Producer methods
+  // create_producer()
+  ffi.Pointer<ffi.Void> create_producer(
+    ffi.Pointer<ffi.Int8> broker
+  ) {
+    return _create_producer(
+      broker,
+    );
+  }
+  late final _create_producerPtr = _lookup<
+          ffi.NativeFunction<
+              ffi.Pointer<ffi.Void> Function(ffi.Pointer<ffi.Int8>)>>(
+      'create_producer');
+  late final _create_producer = _create_producerPtr.asFunction<
+      ffi.Pointer<ffi.Void> Function(ffi.Pointer<ffi.Int8>)>();
+
+  // produce()
+  void produce(
+    ffi.Pointer<ffi.Void> producer,
+    ffi.Pointer<Utf8> topic,
+    ffi.Pointer<ffi.Uint8> data,
+    int datalen,
+  ) {
+    return _produce(
+      producer,
+      topic,
+      data,
+      datalen,
+    );
+  }
+  late final _producePtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(
+              ffi.Pointer<ffi.Void>,
+              ffi.Pointer<Utf8>,
+              ffi.Pointer<ffi.Uint8>,
+              ffi.Uint64)>>('produce');
+  late final _produce = _producePtr.asFunction<
+      void Function(ffi.Pointer<ffi.Void>,
+        ffi.Pointer<Utf8>,
+        ffi.Pointer<ffi.Uint8>,
+        int)>();
+
+  // destroy_producer()
+  void destroy_producer(
+    ffi.Pointer<ffi.Void> producer,
+  ) {
+    return _destroy_producer(
+      producer,
+    );
+  }
+  late final _destroy_producerPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+          'destroy_producer');
+  late final _destroy_producer =
+      _destroy_producerPtr.asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 }

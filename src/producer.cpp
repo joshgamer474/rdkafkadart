@@ -7,7 +7,8 @@
 
 Producer::Producer(std::string broker,
     std::function<void(std::string topic, std::vector<uint8_t>)> msg_callback,
-    std::shared_ptr<spdlog::sinks::rotating_file_sink_mt> logsink)
+    std::shared_ptr<spdlog::sinks::rotating_file_sink_mt> logsink,
+    spdlog::level::level_enum loglevel)
     : broker(broker),
     msgs_produced(0),
     run(false),
@@ -24,7 +25,7 @@ Producer::Producer(std::string broker,
         long long int rnd = rand() % (715701992318);
         logger = spdlog::stdout_color_mt(std::to_string(rnd));
     }
-    logger->set_level(spdlog::level::debug);
+    logger->set_level(loglevel);
 
     init();
 }
@@ -49,11 +50,8 @@ void Producer::init()
     producer = RdKafka::Producer::create(conf, errstr);
 }
 
-void Producer::produce(std::string topic, const std::vector<uint8_t>& data)
+RdKafka::ErrorCode Producer::produce(std::string topic, const std::vector<uint8_t>& data)
 {
-    logger->debug("Producing to topic {0} {1} bytes",
-        topic.c_str(),
-        data.size());
     RdKafka::ErrorCode resp = producer->produce(topic, partition,
         RdKafka::Producer::RK_MSG_COPY,
         const_cast<uint8_t *>(data.data()), data.size(),
@@ -62,13 +60,19 @@ void Producer::produce(std::string topic, const std::vector<uint8_t>& data)
         0,
         NULL,
         NULL);
+    logger->debug("Produced to topic {} {} bytes, response: {}",
+        topic.c_str(),
+        data.size(),
+        RdKafka::err2str(resp));
     if (resp != RdKafka::ERR_NO_ERROR)
     {
-        logger->error("Failed to produce to topic {0}, error {1}",
+        logger->error("Failed to produce to topic {}, error {}",
             topic.c_str(),
             RdKafka::err2str(resp));
         std::cerr << "% produce() failed: " << RdKafka::err2str(resp) << std::endl;
     }
     msgs_produced++;
     producer->poll(0);
+
+    return resp;
 }

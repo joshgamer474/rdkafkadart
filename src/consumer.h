@@ -19,7 +19,8 @@ public:
         std::function<void(std::string topic, std::vector<uint8_t>)> msg_callback = nullptr,
         std::function<void(void* consumer, const char* topic, uint8_t* data,
             uint64_t len, int64_t offset)> cmsg_callback = nullptr,
-        std::shared_ptr<spdlog::sinks::rotating_file_sink_mt> logsink = nullptr);
+        std::shared_ptr<spdlog::sinks::rotating_file_sink_mt> logsink = nullptr,
+        spdlog::level::level_enum loglevel = spdlog::level::err);
     virtual ~Consumer();
 
     void start(const std::vector<std::string>& topics, int timeout_ms=100);

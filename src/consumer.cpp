@@ -9,7 +9,8 @@ Consumer::Consumer(std::string broker,
     std::function<void(std::string topic, std::vector<uint8_t>)> msg_callback,
     std::function<void(void* consumer, const char* topic,
         uint8_t* data, uint64_t len, int64_t offset)> cmsg_callback,
-    std::shared_ptr<spdlog::sinks::rotating_file_sink_mt> logsink)
+    std::shared_ptr<spdlog::sinks::rotating_file_sink_mt> logsink,
+    spdlog::level::level_enum loglevel)
     : broker(broker),
     msgs_consumed(0),
     run(false),
@@ -31,7 +32,7 @@ Consumer::Consumer(std::string broker,
         long long int rnd = rand() % (715701992318);
         logger = spdlog::stdout_color_mt(std::to_string(rnd));
     }
-    logger->set_level(spdlog::level::trace);
+    logger->set_level(loglevel);
 
     init();
 }

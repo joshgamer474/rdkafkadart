@@ -32,12 +32,15 @@ class KafkaConsumer {
     // Get app folder we can write logs to
     final Directory dir = await getTemporaryDirectory();
     final String temppath = dir.path;
+    final String loglevel = "trace";
 
     // Convert temppath to dart.ffi var
     ffi.Pointer<Utf8> temppathptr = temppath.toNativeUtf8().cast<Utf8>();
+    ffi.Pointer<Utf8> temploglevelptr = loglevel.toNativeUtf8().cast<Utf8>();
     // Set log path for lib
     print("Using path for logs: $temppath");
     _nativelib.set_logpath(temppathptr);
+    _nativelib.set_loglevel(temploglevelptr);
 
     // Convert parameters to dart.ffi vars
     ffi.Pointer<ffi.Int8> brokerp = broker.toNativeUtf8().cast<ffi.Int8>();

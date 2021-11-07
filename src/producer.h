@@ -14,11 +14,11 @@ class Producer {
 public:
     Producer(std::string broker,
         std::function<void(std::string topic, std::vector<uint8_t>)> msg_callback = nullptr,
-        std::shared_ptr<spdlog::sinks::rotating_file_sink_mt> logsink = nullptr);
+        std::shared_ptr<spdlog::sinks::rotating_file_sink_mt> logsink = nullptr,
+        spdlog::level::level_enum loglevel = spdlog::level::err);
     virtual ~Producer();
 
-    void produce(std::string topic, const std::vector<uint8_t>& data);
-
+    RdKafka::ErrorCode produce(std::string topic, const std::vector<uint8_t>& data);
     std::size_t msgs_produced;
 
 private:

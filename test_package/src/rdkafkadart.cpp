@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <consumer.h>
+#include <producer.h>
 #include <rdkafkadart.h>
 
 /*
@@ -26,6 +27,7 @@ void cmsg_callback(void* consumer, const char* topic,
 }
 
 const std::string broker = "192.168.1.55:9092";
+const std::string brokerp = "192.168.1.55:9093";
 
 TEST(RdkafkaDart, RdkafkaDartCreateConsumer)
 {
@@ -150,5 +152,52 @@ TEST(RdkafkaDart, RdkafkaDartConsumerTestDestruction)
     destroy_consumer(consumer);
 
     EXPECT_FALSE(is_running);
+    EXPECT_GT(msgs_consumed, 0);
+}
+
+TEST(RdkafkaDart, RdkafkaDartProducerTestCreateDestruct)
+{
+    // Create producer
+    void* producer = create_producer(brokerp.c_str());
+    Producer* pro = static_cast<Producer*>(producer);
+
+    const size_t msgs_produced = pro->msgs_produced;
+
+    // Destroy producer
+    destroy_producer(producer);
+
+    EXPECT_EQ(msgs_produced, 0);
+}
+
+TEST(RdkafkaDart, RdkafkaDartProducerTestProduceOnce)
+{
+    // Create producer
+    void* producer = create_producer(brokerp.c_str());
+    Producer* pro = static_cast<Producer*>(producer);
+
+    // Create consumer
+    void* consumer = create_consumer(brokerp.c_str());
+    Consumer* con = static_cast<Consumer*>(consumer);
+
+    // Produce a message to topic p
+    const std::vector<uint8_t> data = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    RdKafka::ErrorCode ret = pro->produce("p", data);
+
+    const size_t msgs_produced = pro->msgs_produced;
+
+    // Destroy producer
+    destroy_producer(producer);
+
+    // Consume msgs on topic p
+    con->start({"p"});
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    con->stop();
+    const size_t msgs_consumed = con->msgs_consumed;
+
+    // Destroy consumer
+    destroy_consumer(consumer);
+
+    EXPECT_EQ(ret, RdKafka::ErrorCode::ERR_NO_ERROR);
+    EXPECT_GT(msgs_produced, 0);
     EXPECT_GT(msgs_consumed, 0);
 }
