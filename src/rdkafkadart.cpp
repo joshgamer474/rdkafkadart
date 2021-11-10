@@ -1,5 +1,6 @@
 #include <rdkafkadart.h>
 #include <chrono>
+#include <map>
 #include <memory>
 
 #include <consumer.h>
@@ -8,6 +9,10 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 
+static std::map<void*, std::unique_ptr<Consumer>> consumers_map =
+    std::map<void*, std::unique_ptr<Consumer>>();
+static std::map<void*, std::unique_ptr<Producer>> producers_map =
+    std::map<void*, std::unique_ptr<Producer>>();
 static std::shared_ptr<spdlog::sinks::rotating_file_sink_mt> filesink;
 static std::shared_ptr<spdlog::logger> logger;
 static spdlog::level::level_enum log_level = spdlog::level::debug;
@@ -74,9 +79,14 @@ void* create_consumer(const char* broker,
 #endif
     }
     logger->info("create_consumer() creating consumer");
-    void* ret = new Consumer(broker, NULL,
+    std::unique_ptr<Consumer> con = std::make_unique<Consumer>(
+        broker,
+        nullptr,
         cmsg_callback, filesink,
-        log_level);
+        log_level
+    );
+    void* ret = con.get();
+    consumers_map[ret] = std::move(con);
     logger->info("create_consumer() created consumer {} to broker {}", ret, broker);
     logger->flush();
     return ret;
@@ -99,9 +109,10 @@ void destroy_consumer(void* consumer)
     logger->info("destroy_consumer() consumer {}",
         consumer);
     logger->flush();
-    Consumer* con = static_cast<Consumer*>(consumer);
-    con->stop();
-    delete con;
+    if (consumers_map.find(consumer) != consumers_map.end())
+    {
+        consumers_map.erase(consumer);
+    }
 }
 
 const char* get_topics_from_consumer(void* consumer)
@@ -142,7 +153,10 @@ void* create_producer(const char* broker)
 #endif
     }
     logger->info("create_producer() creating producer");
-    void* ret = new Producer(broker, NULL, filesink, log_level);
+    std::unique_ptr<Producer> prod = std::make_unique<Producer>(broker, nullptr, filesink, log_level);
+    void* ret = prod.get();
+    producers_map[ret] = std::move(prod);
+    //void* ret = new Producer(broker, NULL, filesink, log_level);
     logger->info("create_producer() created producer {} to broker {}", ret, broker);
     logger->flush();
     return ret;
@@ -163,6 +177,8 @@ void destroy_producer(void* producer)
 {
     logger->info("destroy_producer() producer {}", producer);
     logger->flush();
-    Producer* pro = static_cast<Producer*>(producer);
-    delete pro;
+    if (producers_map.find(producer) != producers_map.end())
+    {
+        producers_map.erase(producer);
+    }
 }

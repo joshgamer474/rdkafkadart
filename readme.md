@@ -94,6 +94,13 @@ if (msgs != null) {
 // Do something with decoded_msgs
 ```
 
+### Destroying/Freeing the C++ Kafka Consumer
+``` dart
+// Must always call destroy() when you're done with/destructing the Kafka Consumer
+// to ensure that C memory is freed
+_consumer.destroy();
+```
+
 ## Kafka Producing
 
 ### Creating a Kafka Producer

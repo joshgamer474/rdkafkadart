@@ -7,15 +7,6 @@
 #include <producer.h>
 #include <rdkafkadart.h>
 
-/*
-// Kafka Consumer methods
-RDK_EXPORT void* create_consumer(char* broker, char** topics, int topics_len,
-  void (*ccmsg_callback)(void* consumer, const char* topic, uint8_t* data, uint64_t len));
-RDK_EXPORT void consume(void* consumer, int timeout_ms = 100);
-RDK_EXPORT void destroy_consumer(void* consumer);
-RDK_EXPORT const char* get_topics_from_consumer(void* consumer);
-*/
-
 void cmsg_callback(void* consumer, const char* topic,
     uint8_t* data, uint64_t len, int64_t offset)
 {
@@ -128,10 +119,9 @@ TEST(RdkafkaDart, RdkafkaDartConsumerTestDestruction)
     // Create consumer
     void* consumer = create_consumer(broker.c_str(),
         cmsg_callback);
-    Consumer* con = static_cast<Consumer*>(consumer);
 
     // Destroy consumer
-    delete con;
+    destroy_consumer(consumer);
 
     // Create new consumer
     const std::vector<std::string> topics = {
@@ -141,7 +131,7 @@ TEST(RdkafkaDart, RdkafkaDartConsumerTestDestruction)
     consumer = create_consumer(broker.c_str(),
         cmsg_callback);
 
-    con = static_cast<Consumer*>(consumer);
+    Consumer* con = static_cast<Consumer*>(consumer);
     // Consume topics async with synchronous cmsg_callback()
     con->start(topics);
     // Stop consumer thread after consuming is completed
@@ -186,7 +176,6 @@ TEST(RdkafkaDart, RdkafkaDartProducerTestProduceOnce)
     RdKafka::ErrorCode ret = pro->produce("p", data);
 
     const size_t msgs_produced = pro->msgs_produced;
-
     // Destroy producer
     destroy_producer(producer);
 

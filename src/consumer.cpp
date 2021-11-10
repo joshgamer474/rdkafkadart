@@ -93,6 +93,7 @@ void Consumer::start(const std::vector<std::string>& topics, int timeout_ms)
     // Start consumer for topic+partition at start offset
     for (auto& topic : topics)
     {
+        std::lock_guard<std::mutex> lg(topic_handles_mutex);
         // Create topic handle
         logger->debug("Creating topic handle for topic {}", topic.c_str());
         topic_handles[topic] = RdKafka::Topic::create(consumer, topic, tconf, errstr);
@@ -166,6 +167,10 @@ void Consumer::consume(int timeout_ms)
             // Consume each topic one at a time
             for (auto& pair : topic_handles)
             {
+                if (pair.second == nullptr)
+                {
+                    break;
+                }
                 // Consume topic for message
                 logger->debug("Consuming msgs on topic {}", pair.first.c_str());
                 RdKafka::Message *msg = consumer->consume(pair.second, partition, timeout_ms);
@@ -306,6 +311,7 @@ void Consumer::clear_topichandles()
             msgs_consumed_map[pair.first],
             pair.first.c_str());
         consumer->stop(pair.second, partition);
+        std::lock_guard<std::mutex> lg(topic_handles_mutex);
         delete pair.second;
     }
     topic_handles.clear();

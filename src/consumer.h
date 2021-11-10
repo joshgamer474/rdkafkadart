@@ -51,6 +51,7 @@ private:
     std::string broker;
     std::map<std::string, RdKafka::Topic*> topic_handles;
     std::map<std::string, size_t> msgs_consumed_map;
+    std::mutex topic_handles_mutex;
     std::mutex queued_msgs_mutex;
     std::mutex sent_msgs_mutex;
     std::deque<RdKafka::Message*> queued_msgs;
