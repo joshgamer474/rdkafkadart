@@ -177,6 +177,10 @@ After these changes Flutter should successfully copy libRdkafkaDart.so into your
 ## Cross-building C++ RdkafkaDart for iOS
 * Note: Must be ran on MacOS.
 
+```git clone https://github.com/theodelrieu/conan-darwin-toolchain.git```
+
+```cd conan-darwin-toolchain && conan export . theodelrieu/stable && cd ..```
+
 ```git clone https://github.com/joshgamer474/rdkafkadart.git```
 
 ```cd rdkafkadart```

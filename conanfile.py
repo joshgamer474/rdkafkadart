@@ -20,7 +20,7 @@ class Rdkafka(ConanFile):
       "gtest/1.11.0",
       "spdlog/1.9.2"
     )
-    exports_sources = "src/*"
+    exports_sources = "src/*", "CMakeLists.txt", "test_package/*"
 
     #def configure(self):
       #self.options["spdlog"].shared = self.options.shared
