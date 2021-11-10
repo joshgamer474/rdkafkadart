@@ -331,12 +331,26 @@ void Consumer::clear_sentmsgs()
     logger->debug("Clearing sent messages queue");
     while (!sent_msgs.empty())
     {
-        std::lock_guard<std::mutex> lg(sent_msgs_mutex);
-        RdKafka::Message* msg = sent_msgs.front();
-        sent_msgs.pop_front();
-        if (msg)
-        {
-            delete msg;
-        }
+        ack();
+    }
+}
+
+void Consumer::ack_all()
+{
+    clear_sentmsgs();
+}
+
+void Consumer::ack()
+{
+    if (sent_msgs.empty())
+    {
+        return;
+    }
+    std::lock_guard<std::mutex> lg(sent_msgs_mutex);
+    RdKafka::Message* msg = sent_msgs.front();
+    sent_msgs.pop_front();
+    if (msg)
+    {
+        delete msg;
     }
 }

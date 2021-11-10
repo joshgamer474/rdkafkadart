@@ -119,6 +119,34 @@ class RdkafkaLibrary {
   late final _get_topics_from_consumer = _get_topics_from_consumerPtr
       .asFunction<ffi.Pointer<Utf8> Function(ffi.Pointer<ffi.Void>)>();
 
+  // ack()
+  void ack(
+    ffi.Pointer<ffi.Void> consumer,
+  ) {
+    return _ack(
+      consumer,
+    );
+  }
+  late final _ackPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+          'ack');
+  late final _ack =
+      _ackPtr.asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  // ack_all()
+  void ack_all(
+    ffi.Pointer<ffi.Void> consumer,
+  ) {
+    return _ack_all(
+      consumer,
+    );
+  }
+  late final _ack_allPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+          'ack_all');
+  late final _ack_all =
+      _ack_allPtr.asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
 
   /// Kafka Producer methods
   // create_producer()

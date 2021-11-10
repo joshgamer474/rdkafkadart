@@ -33,6 +33,8 @@ RDK_EXPORT void* create_consumer(const char* broker,
 RDK_EXPORT void consume(void* consumer, const char** topics, int topics_len, int timeout_ms = 100);
 RDK_EXPORT void destroy_consumer(void* consumer);
 RDK_EXPORT const char* get_topics_from_consumer(void* consumer);
+RDK_EXPORT void ack(void* consumer);
+RDK_EXPORT void ack_all(void* consumer);
 
 // Kafka Producer methods
 RDK_EXPORT void* create_producer(const char* broker);

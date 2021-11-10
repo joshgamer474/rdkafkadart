@@ -60,11 +60,11 @@ await _consumer.create_consumer();
 final List<String> topics = _consumer.get_topics();
 ```
 
-### Consuming topics
+### Consuming topics synchronously (*messages are consumed asynchronous but the callback is made to be synchronous)
 ``` dart
 final List<String> topics = ['a', 'b', 'c'];
 
-// Consume topics a, b, and c asynchronously w/ synchronous consume() callback
+// Consume topics a, b, and c w/ synchronous consume() callback
 Map<String, Map<int, Uint8List>>? msgs =
   _consumer.consume(topics, timeout_ms: 1000);
 

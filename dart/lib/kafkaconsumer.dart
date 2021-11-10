@@ -117,6 +117,9 @@ class KafkaConsumer {
         _ackd_msgs[topic]!.add(offset);
       }
     }
+    if (_native_instance != null) {
+      _nativelib.ack(_native_instance!);
+    }
   }
 
   void cleanup_acked_msgs() {
@@ -149,6 +152,7 @@ class KafkaConsumer {
         _consumed_msgs.remove(_native_instance);
       }
     }
+    _nativelib.ack_all(_native_instance!);
   }
 
   /// Destroys the created Kafka Consumer

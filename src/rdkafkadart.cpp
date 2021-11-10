@@ -8,22 +8,8 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 
-/*
-#ifdef RdkafkaDart_ANDROID
-static auto filesink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>
-    ("/data/data/com.example.pokestonks_mobile/rdkafka.log", 1479120392, 1, true);
-#elif RdkafkaDart_IOS
-static auto filesink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>
-    ("~/tmp/rdkafka.log", 1479120392, 1, true);
-#else
-static std::shared_ptr<spdlog::sinks::rotating_file_sink_mt> filesink =
-    std::make_shared<spdlog::sinks::rotating_file_sink_mt>
-        ("logs/rdkafka.log", 1479120392, 1, true);
-#endif
-*/
 static std::shared_ptr<spdlog::sinks::rotating_file_sink_mt> filesink;
-static std::shared_ptr<spdlog::logger> logger;// =
-    //std::make_shared<spdlog::logger>("RdkafkaDart", filesink);
+static std::shared_ptr<spdlog::logger> logger;
 static spdlog::level::level_enum log_level = spdlog::level::debug;
 
 // Initializes the spdlog logger and rotating file sink filesink
@@ -125,6 +111,18 @@ const char* get_topics_from_consumer(void* consumer)
         consumer,
         con->get_alltopicsstr().c_str());
     return con->get_alltopicsstr().data();
+}
+
+void ack(void* consumer)
+{
+    Consumer* con = static_cast<Consumer*>(consumer);
+    con->ack();
+}
+
+void ack_all(void* consumer)
+{
+    Consumer* con = static_cast<Consumer*>(consumer);
+    con->ack_all();
 }
 
 /*

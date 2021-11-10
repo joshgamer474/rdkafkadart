@@ -24,6 +24,8 @@ void cmsg_callback(void* consumer, const char* topic,
         topic,
         len,
         datastr.c_str());
+    Consumer* con = static_cast<Consumer*>(consumer);
+    con->ack();
 }
 
 const std::string broker = "192.168.1.55:9092";

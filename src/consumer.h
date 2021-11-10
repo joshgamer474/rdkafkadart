@@ -28,6 +28,8 @@ public:
     bool is_running();
     const std::vector<std::string>& get_alltopics();
     const std::string& get_alltopicsstr();
+    void ack();
+    void ack_all();
 
     std::size_t msgs_consumed;
 
