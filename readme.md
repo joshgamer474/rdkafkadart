@@ -1,6 +1,6 @@
 # RdkafkaDart
 
-[![Build Status](https://travis-ci.org/joshgamer474/rdkafkadart.svg?branch=master)](https://travis-ci.org/joshgamer474/rdkafkadart)
+[![Build Status](https://app.travis-ci.com/joshgamer474/rdkafkadart.svg?branch=master)](https://travis-ci.org/joshgamer474/rdkafkadart)
 
 A functional Apache Kafka Dart library that utilizes edenhill's C/C++ [librdkafka library](https://github.com/edenhill/librdkafka) v1.8.2.
 
