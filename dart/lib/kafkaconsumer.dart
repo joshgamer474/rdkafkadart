@@ -93,6 +93,8 @@ class KafkaConsumer {
       for (var i = 0; i < topics.length; i++) {
         topicsp[i] = topics[i].toNativeUtf8().cast<ffi.Int8>();
       }
+      // Consume Kafka topics
+      // call is blocking because cmsg_callback() must be called back synchronously
       _nativelib.consume(_native_instance!, topicsp, topics.length, timeout_ms);
       // Free memory for temporary ffi pointer
       calloc.free(topicsp);

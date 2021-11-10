@@ -29,7 +29,7 @@ class KafkaProducer {
     final String temppath = dir.path;
     final String loglevel = "trace";
 
-    // Convert temppath to dart.ffi var
+    // Convert temppath and loglevel to dart.ffi c pointer objects
     ffi.Pointer<Utf8> temppathptr = temppath.toNativeUtf8().cast<Utf8>();
     ffi.Pointer<Utf8> temploglevelptr = loglevel.toNativeUtf8().cast<Utf8>();
     // Set log path for lib
@@ -37,7 +37,7 @@ class KafkaProducer {
     _nativelib.set_logpath(temppathptr);
     _nativelib.set_loglevel(temploglevelptr);
 
-    // Convert parameters to dart.ffi vars
+    // Convert parameters to dart.ffi c pointer objects
     ffi.Pointer<ffi.Int8> brokerp = broker.toNativeUtf8().cast<ffi.Int8>();
 
     // Initialize Kafka Producer instance
@@ -46,6 +46,7 @@ class KafkaProducer {
 
   /// Produce data to topic
   void produce(String topic, Uint8List data) {
+      // Copy parameters into dart.ffi c pointer objects
       ffi.Pointer<Utf8> topicptr = topic.toNativeUtf8().cast<Utf8>();
       ffi.Pointer<ffi.Uint8> dataptr = malloc.allocate<ffi.Uint8>(data.length);
       for (int i = 0; i < data.length; i++) {
