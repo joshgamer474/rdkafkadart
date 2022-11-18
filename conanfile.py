@@ -8,12 +8,12 @@ class Rdkafka(ConanFile):
     name = "rdkafka-dart"
     version = "1.8.2"
     settings = "os", "compiler", "arch"
-    options = {"shared": [True, False]}
+    options = {"shared": [True, False], "package_arch_path": [True, False]}
     settings = {"os" : ["Windows", "Linux", "Macos", "Android", "iOS"], 
       "arch": ["x86", "x86_64", "armv7", "armv8"],
       "compiler": ["Visual Studio", "gcc", "clang", "apple-clang"],
       "build_type": ["Debug", "Release"]}
-    default_options = "shared=True"
+    default_options = {"shared": True, "package_arch_path": True}
     generators = "cmake"
     requires = (
       "librdkafka/1.8.2",
@@ -64,19 +64,21 @@ class Rdkafka(ConanFile):
 
     def package(self):
       libDest = os.getenv("CONAN_IMPORT_PATH", "lib")
-      if (self.settings.arch == "armv7"):
-          libDest += os.sep + "armeabi-v7a"
-      elif (self.settings.arch == "armv8"):
-          libDest += os.sep + "arm64-v8a"
-      else:
-          libDest += os.sep + str(self.settings.arch)
+      if self.options.package_arch_path:
+        if (self.settings.arch == "armv7"):
+            libDest += os.sep + "armeabi-v7a"
+        elif (self.settings.arch == "armv8"):
+            libDest += os.sep + "arm64-v8a"
+        else:
+            libDest += os.sep + str(self.settings.arch)
       self.copy("Rdkafka*", src="bin", dst="bin", keep_path=False, excludes="RdkafkaTest*")
       self.copy("*.dll", src="bin", dst="bin", excludes="g*.dll")
       self.copy("*.h", src="src", dst="include")
       self.copy("*.h", src="include", dst="include")
       #self.copy("*.a", src="lib", dst=libDest, keep_path=False)
+      self.copy("*.lib", src="lib", dst=libDest, keep_path=False)
       self.copy("*.so", src="lib", dst=libDest, keep_path=False)
       self.copy("*.dylib", src="lib", dst=libDest, keep_path=False)
 
     def package_info(self):
-      self.cpp_info.libs = ["rdkafka-dart"]
+      self.cpp_info.libs = ["RdkafkaDart"]
