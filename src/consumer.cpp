@@ -149,17 +149,19 @@ void Consumer::start(const std::vector<std::string>& topics, int timeout_ms)
     logger->debug("Reached bottom of start()");
 }
 
-void Consumer::consume(int timeout_ms)
+void Consumer::consume(const int timeout_ms)
 {
     if (consume_thread)
     {
         return;
     }
     logger->info("Starting consume_thread");
-    consume_thread = std::make_unique<std::thread>([&]()
+    consume_thread = std::make_unique<std::thread>([&, timeout_ms]()
     {
+        bool consumed_msg = false;
         while (!stop_consumer_thread)
         {
+            consumed_msg = false;
             if (topic_handles.empty() || consumer == nullptr)
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -167,9 +169,10 @@ void Consumer::consume(int timeout_ms)
             }
 
             // Poll for kafka consumer events
-            consumer->poll(0);
+            consumer->poll(timeout_ms);
 
             // Consume each topic one at a time
+            std::lock_guard<std::mutex> lg(topic_handles_mutex);
             for (auto& pair : topic_handles)
             {
                 if (pair.second == nullptr)
@@ -192,6 +195,7 @@ void Consumer::consume(int timeout_ms)
                         {   // Reached end of partition for this topic
                             break;
                         }
+                        consumed_msg = true;
                     }
                     else
                     {
@@ -204,7 +208,7 @@ void Consumer::consume(int timeout_ms)
                     }
 
                     // Poll for more kafka consumer events
-                    consumer->poll(0);
+                    consumer->poll(timeout_ms);
 
                     // Consume next message
                     msg = consumer->consume(pair.second, partition, timeout_ms);
@@ -218,12 +222,18 @@ void Consumer::consume(int timeout_ms)
                 logger->debug("Consumed {} msgs on topic {}",
                     msgs_consumed_map[pair.first],
                     pair.first);
-            }
-            logger->info("consume_thread has finished running");
-            done_consuming = true;
-            // Clear topichandles to end topic consumption
-            clear_topichandles();
+            } // end for(topic : topic_handles)
+
+          // Check if any msgs were consumed
+          // If no msgs were available, sleep the consumer thread and retry consuming
+          if (!consumed_msg) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+          }
+
         } // end while(!stop_consumer_thread)
+
+        logger->info("consume_thread has finished running");
+        done_consuming = true;
     });
 }
 

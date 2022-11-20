@@ -1,5 +1,7 @@
 #ifndef _CONSUMER_H_
 #define _CONSUMER_H_
+
+#include <atomic>
 #include <functional>
 #include <map>
 #include <memory>
@@ -36,16 +38,16 @@ public:
 
 private:
     void init();
-    void consume(int timeout_ms=100);
+    void consume(const int timeout_ms=100);
     RdKafka::ErrorCode consume_msg(std::string topic, RdKafka::Message* msg, void* opaque);
     void clear_queuedmsgs();
     void clear_sentmsgs();
     void clear_topichandles();
 
     std::shared_ptr<spdlog::logger> logger;
-    bool run;
-    bool done_consuming;
-    bool stop_consumer_thread;
+    std::atomic_bool run;
+    std::atomic_bool done_consuming;
+    std::atomic_bool stop_consumer_thread;
     int32_t partition;
     int64_t start_offset;
     std::unique_ptr<std::thread> consume_thread;
