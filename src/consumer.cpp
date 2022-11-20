@@ -82,6 +82,10 @@ void Consumer::init()
       alltopicsstr.c_str());
 }
 
+void Consumer::set_start_offset(const int64_t _start_offset) {
+  start_offset = _start_offset;
+}
+
 void Consumer::start(const std::vector<std::string>& topics, int timeout_ms)
 {
     run = true;
@@ -161,6 +165,7 @@ void Consumer::consume(int timeout_ms)
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 continue;
             }
+
             // Poll for kafka consumer events
             consumer->poll(0);
 
@@ -171,6 +176,7 @@ void Consumer::consume(int timeout_ms)
                 {
                     break;
                 }
+
                 // Consume topic for message
                 logger->debug("Consuming msgs on topic {}", pair.first.c_str());
                 RdKafka::Message *msg = consumer->consume(pair.second, partition, timeout_ms);
@@ -312,7 +318,9 @@ void Consumer::clear_topichandles()
             pair.first.c_str());
         consumer->stop(pair.second, partition);
         std::lock_guard<std::mutex> lg(topic_handles_mutex);
-        delete pair.second;
+        if (pair.second) {
+          delete pair.second;
+        }
     }
     topic_handles.clear();
 }

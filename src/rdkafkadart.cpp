@@ -66,7 +66,8 @@ void set_loglevel(const char* loglevel)
 
 void* create_consumer(const char* broker,
   void (*cmsg_callback)(void* consumer, const char* topic,
-      uint8_t* data, uint64_t len, int64_t offset))
+      uint8_t* data, uint64_t len, int64_t offset),
+  const int64_t start_offset)
 {
     if (logger == nullptr)
     {
@@ -85,6 +86,7 @@ void* create_consumer(const char* broker,
         cmsg_callback, filesink,
         log_level
     );
+    con->set_start_offset(start_offset);
     void* ret = con.get();
     consumers_map[ret] = std::move(con);
     logger->info("create_consumer() created consumer {} to broker {}", ret, broker);

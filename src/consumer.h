@@ -23,6 +23,7 @@ public:
         spdlog::level::level_enum loglevel = spdlog::level::err);
     virtual ~Consumer();
 
+    void set_start_offset(const int64_t start_offset);
     void start(const std::vector<std::string>& topics, int timeout_ms=100);
     void stop();
     bool is_running();

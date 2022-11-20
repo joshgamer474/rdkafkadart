@@ -12,7 +12,7 @@ class Rdkafka(ConanFile):
     settings = {"os" : ["Windows", "Linux", "Macos", "Android", "iOS"], 
       "arch": ["x86", "x86_64", "armv7", "armv8"],
       "compiler": ["Visual Studio", "gcc", "clang", "apple-clang"],
-      "build_type": ["Debug", "Release"]}
+      "build_type": ["Debug", "Release", "RelWithDebInfo"]}
     default_options = {"shared": True, "package_arch_path": True}
     generators = "cmake"
     requires = (
