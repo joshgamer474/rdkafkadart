@@ -54,20 +54,24 @@ class RdkafkaLibrary {
   ffi.Pointer<ffi.Void> create_consumer(
     ffi.Pointer<ffi.Int8> broker,
     ffi.Pointer<ffi.NativeFunction<cmsgcallback>> cmsgcallback,
+    ffi.Pointer<ffi.Int64> start_offset,
   ) {
     return _create_consumer(
       broker,
       cmsgcallback,
+      start_offset,
     );
   }
   late final _create_consumerPtr = _lookup<
           ffi.NativeFunction<
               ffi.Pointer<ffi.Void> Function(ffi.Pointer<ffi.Int8>,
-                  ffi.Pointer<ffi.NativeFunction<cmsgcallback>>)>>(
+                  ffi.Pointer<ffi.NativeFunction<cmsgcallback>>,
+                  ffi.Pointer<ffi.Int64>)>>(
       'create_consumer');
   late final _create_consumer = _create_consumerPtr.asFunction<
       ffi.Pointer<ffi.Void> Function(ffi.Pointer<ffi.Int8>,
-          ffi.Pointer<ffi.NativeFunction<cmsgcallback>>)>();
+          ffi.Pointer<ffi.NativeFunction<cmsgcallback>>,
+          ffi.Pointer<ffi.Int64>)>();
 
   // consume()
   void consume(
