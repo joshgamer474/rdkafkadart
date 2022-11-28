@@ -169,7 +169,7 @@ void Consumer::consume(const int timeout_ms)
             }
 
             // Poll for kafka consumer events
-            consumer->poll(timeout_ms);
+            consumer->poll(0);
 
             // Consume each topic one at a time
             std::lock_guard<std::mutex> lg(topic_handles_mutex);
