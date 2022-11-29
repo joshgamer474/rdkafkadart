@@ -45,9 +45,17 @@ class KafkaConsumer {
     // Convert parameters to dart.ffi vars
     ffi.Pointer<ffi.Int8> brokerp = broker.toNativeUtf8().cast<ffi.Int8>();
 
+    //Consume from beginning
+    //#define RD_KAFKA_OFFSET_BEGINNING -2
+    // Consume from end
+    //#define RD_KAFKA_OFFSET_END -1
+    int start_offset = -1;
+
     // Initialize Kafka Consumer instance
     _native_instance = _nativelib.create_consumer(
-        brokerp, ffi.Pointer.fromFunction<cmsgcallback>(cmsg_callback));
+        brokerp,
+        ffi.Pointer.fromFunction<cmsgcallback>(cmsg_callback),
+        start_offset);
   }
 
   /// RdKafka C message receive callback
