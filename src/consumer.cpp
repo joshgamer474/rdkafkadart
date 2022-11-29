@@ -164,7 +164,7 @@ void Consumer::consume(const int timeout_ms)
             consumed_msg = false;
             if (topic_handles.empty() || consumer == nullptr)
             {
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
                 continue;
             }
 
@@ -208,7 +208,7 @@ void Consumer::consume(const int timeout_ms)
                     }
 
                     // Poll for more kafka consumer events
-                    consumer->poll(timeout_ms);
+                    consumer->poll(0);
 
                     // Consume next message
                     msg = consumer->consume(pair.second, partition, timeout_ms);
