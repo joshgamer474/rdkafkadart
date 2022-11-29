@@ -49,7 +49,7 @@ class KafkaConsumer {
     //#define RD_KAFKA_OFFSET_BEGINNING -2
     // Consume from end
     //#define RD_KAFKA_OFFSET_END -1
-    int start_offset = -1;
+    int start_offset = -2;
 
     // Initialize Kafka Consumer instance
     _native_instance = _nativelib.create_consumer(
@@ -94,7 +94,7 @@ class KafkaConsumer {
 
   /// Consume all topics from Kafka
   Map<String, Map<int, Uint8List>>? consume(List<String> topics,
-      {int timeout_ms = 1000}) {
+      {int timeout_ms = 3000}) {
     if (_native_instance != null) {
       // Convert parameter topics to dart.ffi var
       final ffi.Pointer<ffi.Pointer<ffi.Int8>> topicsp = calloc(topics.length);

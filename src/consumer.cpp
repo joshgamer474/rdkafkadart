@@ -164,7 +164,7 @@ void Consumer::consume(const int timeout_ms)
             consumed_msg = false;
             if (topic_handles.empty() || consumer == nullptr)
             {
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
                 continue;
             }
 
@@ -172,7 +172,7 @@ void Consumer::consume(const int timeout_ms)
             consumer->poll(0);
 
             // Consume each topic one at a time
-            std::lock_guard<std::mutex> lg(topic_handles_mutex);
+            std::unique_lock<std::mutex> lg(topic_handles_mutex);
             for (auto& pair : topic_handles)
             {
                 if (pair.second == nullptr)
@@ -223,6 +223,19 @@ void Consumer::consume(const int timeout_ms)
                     msgs_consumed_map[pair.first],
                     pair.first);
             } // end for(topic : topic_handles)
+
+          // Unlock topic_handles mutex
+          lg.unlock();
+
+          // Check if we should exit consume thread after consuming all current available msgs
+          // due to found msgs being queued and awaiting to be read/consumed by user
+          if (cmsg_callback != nullptr) {
+            // Force sleep while(!stop_consumer_thread)
+            logger->info("consume_thread has finished running");
+            done_consuming = true;
+            // Clear topichandles to end topic consumption
+            clear_topichandles();
+          }
 
           // Check if any msgs were consumed
           // If no msgs were available, sleep the consumer thread and retry consuming
