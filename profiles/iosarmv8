@@ -3,12 +3,13 @@ include(default)
 [settings]
 os=iOS
 os.version=11.0
+os.sdk=iphoneos
 arch=armv8
 build_type=Release
 compiler=apple-clang
 compiler.cppstd=17
 compiler.libcxx=libc++
-compiler.version=12.0
+compiler.version=14.0
 [build_requires]
 darwin-toolchain/1.0.8@theodelrieu/stable
 [env]

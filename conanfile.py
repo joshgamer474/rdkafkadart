@@ -79,6 +79,13 @@ class Rdkafka(ConanFile):
       self.copy("*.lib", src="lib", dst=libDest, keep_path=False)
       self.copy("*.so", src="lib", dst=libDest, keep_path=False)
       self.copy("*.dylib", src="lib", dst=libDest, keep_path=False)
+      if self.settings.os == "iOS":
+        self.copy("RdkafkaDart.framework/*", src="lib", dst=libDest, symlinks=True)
+      #  tools.mkdir("RdkafkaDart.framework/Headers")
+      #  self.copy("*.h", src="include", dst="RdkafkaDart.framework/Headers")
 
     def package_info(self):
       self.cpp_info.libs = ["RdkafkaDart"]
+      if self.settings.os == "iOS":
+        self.cpp_info.frameworkdirs.append(self.package_folder)
+        self.cpp_info.frameworks.append("RdkafkaDart")

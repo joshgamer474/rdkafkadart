@@ -35,6 +35,14 @@ endif()
 # iOS flags
 if(BUILD_IOS)
     add_compile_definitions(RdkafkaDart_IOS)
+    set(FRAMEWORK_BUNDLE_IDENTIFIER "iPhone Developer")
+    set_target_properties(RdkafkaDart PROPERTIES
+      FRAMEWORK TRUE
+      PUBLIC_HEADER ${RDKAFKA_HEADERS}
+      MACOSX_FRAMEWORK_IDENTIFIER com.childers.rdkafkadart
+      MACOSX_FRAMEWORK_SHORT_VERSION_STRING "11.0"
+      XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "iPhone Developer"
+      XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET "11.0")
 endif()
 
 target_include_directories(RdkafkaDart PUBLIC

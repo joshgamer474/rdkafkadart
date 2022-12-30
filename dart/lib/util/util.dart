@@ -15,7 +15,8 @@ String getLibraryPath({String? libpath}) {
   } else if (Platform.isAndroid) {
     libraryPath = path.join('libRdkafkaDart.so');
   } else if (Platform.isIOS) {
-    libraryPath = path.join('libRdkafkaDart.dylib');
+    //libraryPath = path.join('libRdkafkaDart.dylib');
+    libraryPath = path.join('RdkafkaDart.framework/RdkafkaDart');
   }
   //print("libraryPath: $libraryPath");
   return libraryPath;
